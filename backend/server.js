@@ -17,7 +17,7 @@ const pool = new Pool({
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://your-frontend-app.netlify.app', 'https://your-frontend-app--deploy-preview.netlify.app']
+        ? ['https://app-quiz-ui.netlify.app', 'https://app-quiz-ui--deploy-preview.netlify.app']
         : ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true
 }));
