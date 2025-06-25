@@ -1,0 +1,333 @@
+<template>
+  <div class="dashboard-page">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>Welcome to Your Dashboard</h1>
+        <p>Manage your data and explore the app features</p>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3>User Profile</h3>
+          <div v-if="editingProfile" class="profile-edit">
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input
+                v-model="profileForm.name"
+                type="text"
+                class="form-input"
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+            <div class="profile-actions">
+              <button
+                @click="saveProfile"
+                class="btn btn-primary"
+                :disabled="updatingProfile"
+              >
+                <span v-if="updatingProfile" class="loading"></span>
+                {{ updatingProfile ? "Saving..." : "Save" }}
+              </button>
+              <button @click="cancelProfileEdit" class="btn btn-secondary">
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div v-else class="profile-info">
+            <p><strong>Name:</strong> {{ user?.name }}</p>
+            <p><strong>Email:</strong> {{ user?.email }}</p>
+            <p><strong>Questions Created:</strong> {{ questionCount }}</p>
+            <button
+              @click="startProfileEdit"
+              class="btn btn-secondary btn-small"
+              style="margin-top: 1rem"
+            >
+              Edit Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="message" class="alert" :class="messageType">
+        {{ message }}
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { ref, computed, onMounted } from "vue"
+import { auth } from "../services/auth"
+import api from "../services/api"
+
+export default {
+  name: "Dashboard",
+  setup() {
+    const user = computed(() => auth.user.value)
+    const loading = ref(false)
+    const saving = ref(false)
+    const updatingProfile = ref(false)
+    const editingProfile = ref(false)
+    const message = ref("")
+    const messageType = ref("alert-success")
+    const profileForm = ref({ name: "" })
+
+    const userNotes = ref("")
+    const favoriteColor = ref("")
+    const savedData = ref(null)
+    const questionCount = ref(0)
+
+    const showMessage = (text, type = "alert-success") => {
+      message.value = text
+      messageType.value = type
+      setTimeout(() => {
+        message.value = ""
+      }, 3000)
+    }
+
+    const saveData = async () => {
+      saving.value = true
+      try {
+        const data = {
+          notes: userNotes.value,
+          favoriteColor: favoriteColor.value,
+          timestamp: new Date().toISOString(),
+        }
+
+        await api.post("/user/data", { data })
+        savedData.value = { ...data, updated_at: new Date().toISOString() }
+        showMessage("Data saved successfully!")
+      } catch (error) {
+        showMessage(
+          "Failed to save data: " +
+            (error.response?.data?.error || error.message),
+          "alert-error"
+        )
+      } finally {
+        saving.value = false
+      }
+    }
+
+    const loadUserData = async () => {
+      loading.value = true
+      try {
+        const response = await api.get("/user/data")
+        if (response.data.data) {
+          savedData.value = {
+            ...response.data.data,
+            updated_at: response.data.updated_at,
+          }
+          userNotes.value = response.data.data.notes || ""
+          favoriteColor.value = response.data.data.favoriteColor || ""
+          showMessage("Data loaded successfully!")
+        }
+      } catch (error) {
+        showMessage(
+          "Failed to load data: " +
+            (error.response?.data?.error || error.message),
+          "alert-error"
+        )
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const clearData = () => {
+      userNotes.value = ""
+      favoriteColor.value = ""
+      showMessage("Local data cleared!")
+    }
+
+    const loadQuestionCount = async () => {
+      try {
+        const response = await api.get("/questions")
+        questionCount.value = response.data.questions.length
+      } catch (error) {
+        console.error("Failed to load question count:", error)
+        questionCount.value = 0
+      }
+    }
+
+    const formatDate = (dateString) => {
+      if (!dateString) return "N/A"
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    }
+
+    const startProfileEdit = () => {
+      editingProfile.value = true
+      profileForm.value.name = user.value?.name || ""
+    }
+
+    const cancelProfileEdit = () => {
+      editingProfile.value = false
+      profileForm.value.name = ""
+    }
+
+    const saveProfile = async () => {
+      updatingProfile.value = true
+
+      try {
+        if (!profileForm.value.name.trim()) {
+          showMessage("Name is required", "alert-error")
+          return
+        }
+
+        const response = await api.put("/user/profile", {
+          name: profileForm.value.name.trim(),
+        })
+
+        // Update the user in auth store
+        auth.updateUser(response.data.user)
+
+        showMessage("Profile updated successfully!")
+        editingProfile.value = false
+      } catch (error) {
+        showMessage(
+          "Failed to update profile: " +
+            (error.response?.data?.error || error.message),
+          "alert-error"
+        )
+      } finally {
+        updatingProfile.value = false
+      }
+    }
+
+    onMounted(() => {
+      loadUserData()
+      loadQuestionCount()
+    })
+
+    return {
+      user,
+      loading,
+      saving,
+      updatingProfile,
+      editingProfile,
+      message,
+      messageType,
+      profileForm,
+      userNotes,
+      favoriteColor,
+      savedData,
+      questionCount,
+      saveData,
+      loadUserData,
+      clearData,
+      loadQuestionCount,
+      startProfileEdit,
+      cancelProfileEdit,
+      saveProfile,
+      formatDate,
+    }
+  },
+}
+</script>
+
+<style scoped>
+.dashboard-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 2rem 0;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.dashboard-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+  font-size: 1.1rem;
+  color: var(--text-light);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.profile-info p {
+  margin-bottom: 0.5rem;
+}
+
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  min-width: auto;
+}
+
+.data-display {
+  margin-top: 1rem;
+}
+
+.data-value {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--primary-color);
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 100px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    width: 100%;
+  }
+}
+</style>

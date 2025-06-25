@@ -1,0 +1,585 @@
+<template>
+  <div class="questions-page">
+    <div class="container">
+      <div class="questions-header">
+        <h1>Create Questions</h1>
+        <p>Add questions and assign them to users</p>
+      </div>
+
+      <div class="questions-content">
+        <div class="card">
+          <h3>Add Questions</h3>
+
+          <div v-if="error" class="alert alert-error">
+            {{ error }}
+          </div>
+
+          <div v-if="success" class="alert alert-success">
+            {{ success }}
+          </div>
+
+          <div class="questions-form">
+            <div
+              v-for="(question, index) in questions"
+              :key="index"
+              class="question-item"
+            >
+              <div class="question-row">
+                <div class="question-input-group">
+                  <label class="form-label">Question {{ index + 1 }}</label>
+                  <textarea
+                    v-model="question.text"
+                    class="form-input question-textarea"
+                    :placeholder="`Enter question ${index + 1}...`"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="addressee-group">
+                  <label class="form-label">Addressed to</label>
+                  <select
+                    v-model="question.addresseeId"
+                    class="form-input addressee-select"
+                    required
+                  >
+                    <option value="">Select user...</option>
+                    <option
+                      v-for="user in users"
+                      :key="user.id"
+                      :value="user.id"
+                    >
+                      {{ user.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="question-actions">
+                  <button
+                    @click="removeQuestion(index)"
+                    v-if="questions.length > 1"
+                    class="btn btn-danger btn-small"
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                @click="addQuestion"
+                class="btn btn-secondary"
+                type="button"
+              >
+                + Add Another Question
+              </button>
+
+              <div class="save-section">
+                <button
+                  @click="saveQuestions"
+                  class="btn btn-primary"
+                  :disabled="saving || !canSave"
+                >
+                  <span v-if="saving" class="loading"></span>
+                  {{ saving ? "Saving..." : "Save Questions" }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display existing questions -->
+        <div class="card" v-if="existingQuestions.length > 0">
+          <h3>My Questions</h3>
+          <div class="questions-list">
+            <div
+              v-for="question in existingQuestions"
+              :key="question.id"
+              class="question-card"
+            >
+              <div
+                v-if="editingQuestion?.id === question.id"
+                class="question-edit"
+              >
+                <div class="form-group">
+                  <label class="form-label">Edit Question</label>
+                  <textarea
+                    v-model="editForm.text"
+                    class="form-input"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Addressed to</label>
+                  <select
+                    v-model="editForm.addresseeId"
+                    class="form-input"
+                    required
+                  >
+                    <option value="">Select user...</option>
+                    <option
+                      v-for="user in users"
+                      :key="user.id"
+                      :value="user.id"
+                    >
+                      {{ user.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="question-actions">
+                  <button
+                    @click="saveEdit(question.id)"
+                    class="btn btn-primary btn-small"
+                    :disabled="updating"
+                  >
+                    <span v-if="updating" class="loading"></span>
+                    {{ updating ? "Saving..." : "Save" }}
+                  </button>
+                  <button
+                    @click="cancelEdit"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              <div v-else class="question-content">
+                <p class="question-text">{{ question.question_text }}</p>
+                <div class="question-meta">
+                  <span class="addressee">
+                    📧 To: {{ question.addressee_name }} ({{
+                      question.addressee_email
+                    }})
+                  </span>
+                  <span class="date">
+                    📅 {{ formatDate(question.created_at) }}
+                  </span>
+                </div>
+                <div class="question-actions">
+                  <button
+                    @click="startEdit(question)"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    @click="deleteQuestion(question.id)"
+                    class="btn btn-danger btn-small"
+                    :disabled="deleting === question.id"
+                  >
+                    <span
+                      v-if="deleting === question.id"
+                      class="loading"
+                    ></span>
+                    {{ deleting === question.id ? "Deleting..." : "Delete" }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { ref, computed, onMounted } from "vue"
+import api from "../services/api"
+
+export default {
+  name: "Questions",
+  setup() {
+    const users = ref([])
+    const questions = ref([{ text: "", addresseeId: "" }])
+    const existingQuestions = ref([])
+    const loading = ref(false)
+    const saving = ref(false)
+    const updating = ref(false)
+    const deleting = ref(null)
+    const error = ref("")
+    const success = ref("")
+    const editingQuestion = ref(null)
+    const editForm = ref({ text: "", addresseeId: "" })
+
+    const canSave = computed(() => {
+      return questions.value.some((q) => q.text.trim() && q.addresseeId)
+    })
+
+    const showMessage = (message, type = "success") => {
+      if (type === "success") {
+        success.value = message
+        error.value = ""
+      } else {
+        error.value = message
+        success.value = ""
+      }
+
+      setTimeout(() => {
+        success.value = ""
+        error.value = ""
+      }, 5000)
+    }
+
+    const loadUsers = async () => {
+      try {
+        const response = await api.get("/users")
+        users.value = response.data.users
+      } catch (err) {
+        showMessage(
+          "Failed to load users: " + (err.response?.data?.error || err.message),
+          "error"
+        )
+      }
+    }
+
+    const loadQuestions = async () => {
+      try {
+        const response = await api.get("/questions")
+        existingQuestions.value = response.data.questions
+      } catch (err) {
+        console.error("Failed to load questions:", err)
+      }
+    }
+
+    const addQuestion = () => {
+      questions.value.push({ text: "", addresseeId: "" })
+    }
+
+    const removeQuestion = (index) => {
+      questions.value.splice(index, 1)
+    }
+
+    const saveQuestions = async () => {
+      saving.value = true
+
+      try {
+        const validQuestions = questions.value.filter(
+          (q) => q.text.trim() && q.addresseeId
+        )
+
+        if (validQuestions.length === 0) {
+          showMessage(
+            "Please add at least one valid question with an addressee",
+            "error"
+          )
+          return
+        }
+
+        await api.post("/questions", { questions: validQuestions })
+
+        showMessage(`Successfully saved ${validQuestions.length} question(s)!`)
+
+        // Reset form
+        questions.value = [{ text: "", addresseeId: "" }]
+
+        // Reload questions
+        await loadQuestions()
+      } catch (err) {
+        showMessage(
+          "Failed to save questions: " +
+            (err.response?.data?.error || err.message),
+          "error"
+        )
+      } finally {
+        saving.value = false
+      }
+    }
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    }
+
+    const startEdit = (question) => {
+      editingQuestion.value = question
+      editForm.value = {
+        text: question.question_text,
+        addresseeId:
+          question.addressee_id || findUserIdByName(question.addressee_name),
+      }
+    }
+
+    const findUserIdByName = (name) => {
+      const user = users.value.find((u) => u.name === name)
+      return user ? user.id : ""
+    }
+
+    const cancelEdit = () => {
+      editingQuestion.value = null
+      editForm.value = { text: "", addresseeId: "" }
+    }
+
+    const saveEdit = async (questionId) => {
+      updating.value = true
+
+      try {
+        if (!editForm.value.text.trim() || !editForm.value.addresseeId) {
+          showMessage("Please fill in all fields", "error")
+          return
+        }
+
+        await api.put(`/questions/${questionId}`, {
+          question_text: editForm.value.text.trim(),
+          addressee_id: editForm.value.addresseeId,
+        })
+
+        showMessage("Question updated successfully!")
+        cancelEdit()
+        await loadQuestions()
+      } catch (err) {
+        showMessage(
+          "Failed to update question: " +
+            (err.response?.data?.error || err.message),
+          "error"
+        )
+      } finally {
+        updating.value = false
+      }
+    }
+
+    const deleteQuestion = async (questionId) => {
+      if (!confirm("Are you sure you want to delete this question?")) {
+        return
+      }
+
+      deleting.value = questionId
+
+      try {
+        await api.delete(`/questions/${questionId}`)
+        showMessage("Question deleted successfully!")
+        await loadQuestions()
+      } catch (err) {
+        showMessage(
+          "Failed to delete question: " +
+            (err.response?.data?.error || err.message),
+          "error"
+        )
+      } finally {
+        deleting.value = null
+      }
+    }
+
+    onMounted(async () => {
+      loading.value = true
+      await Promise.all([loadUsers(), loadQuestions()])
+      loading.value = false
+    })
+
+    return {
+      users,
+      questions,
+      existingQuestions,
+      loading,
+      saving,
+      updating,
+      deleting,
+      error,
+      success,
+      canSave,
+      editingQuestion,
+      editForm,
+      addQuestion,
+      removeQuestion,
+      saveQuestions,
+      startEdit,
+      cancelEdit,
+      saveEdit,
+      deleteQuestion,
+      formatDate,
+    }
+  },
+}
+</script>
+
+<style scoped>
+.questions-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 2rem 0;
+}
+
+.questions-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.questions-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.questions-header p {
+  font-size: 1.1rem;
+  color: var(--text-light);
+}
+
+.questions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.questions-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.question-item {
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: #f8f9fa;
+}
+
+.question-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.question-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.question-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.addressee-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.addressee-select {
+  height: auto;
+  padding: 12px;
+}
+
+.question-actions {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 12px;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 12px;
+  min-width: auto;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 2px solid #e9ecef;
+}
+
+.save-section {
+  display: flex;
+  gap: 1rem;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.question-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.question-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.question-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.question-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .question-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .save-section {
+    justify-content: center;
+  }
+
+  .question-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+</style>
