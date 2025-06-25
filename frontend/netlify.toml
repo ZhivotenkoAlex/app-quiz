@@ -12,7 +12,7 @@
   status = 200
 
 [context.production.environment]
-  VITE_API_URL = "https://your-backend-app.onrender.com"
+  VITE_API_URL = "https://app-quiz-backend-hwv4.onrender.com"
 
 [context.deploy-preview.environment]
-  VITE_API_URL = "https://your-backend-app.onrender.com" 
+  VITE_API_URL = "https://app-quiz-backend-hwv4.onrender.com" 
