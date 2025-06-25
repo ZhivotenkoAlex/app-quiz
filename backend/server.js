@@ -16,9 +16,7 @@ const pool = new Pool({
 
 // Middleware
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
-        ? ['https://app-quiz-ui.netlify.app', 'https://app-quiz-ui--deploy-preview.netlify.app']
-        : ['http://localhost:5173', 'http://localhost:3000'],
+    origin: true,  // Allow all origins temporarily for debugging
     credentials: true
 }));
 app.use(express.json());
@@ -61,7 +59,14 @@ const authenticateToken = (req, res, next) => {
 
 // Routes
 app.get('/api/health', (req, res) => {
+    console.log('Health check called from:', req.get('origin'));
     res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Add a simple test endpoint
+app.get('/api/test', (req, res) => {
+    console.log('Test endpoint called from:', req.get('origin'));
+    res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() });
 });
 
 // Register user
