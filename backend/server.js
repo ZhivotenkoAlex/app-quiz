@@ -30,6 +30,7 @@ const initDB = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -57,6 +58,14 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+// Admin middleware
+const requireAdmin = (req, res, next) => {
+    if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+};
+
 // Routes
 app.get('/api/health', (req, res) => {
     console.log('Health check called from:', req.get('origin'));
@@ -81,12 +90,12 @@ app.post('/api/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
+            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, is_admin',
             [email, hashedPassword, name]
         );
 
         const token = jwt.sign(
-            { userId: result.rows[0].id, email: result.rows[0].email },
+            { userId: result.rows[0].id, email: result.rows[0].email, isAdmin: result.rows[0].is_admin },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
@@ -129,14 +138,14 @@ app.post('/api/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: user.id, email: user.email },
+            { userId: user.id, email: user.email, isAdmin: user.is_admin },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
 
         res.json({
             message: 'Login successful',
-            user: { id: user.id, email: user.email, name: user.name },
+            user: { id: user.id, email: user.email, name: user.name, isAdmin: user.is_admin },
             token
         });
     } catch (error) {
@@ -294,8 +303,8 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
     }
 });
 
-// Get all questions for game (random order)
-app.get('/api/game/questions', authenticateToken, async (req, res) => {
+// Get all questions for game (random order) - Admin only
+app.get('/api/game/questions', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
       SELECT 

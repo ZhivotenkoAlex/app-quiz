@@ -11,7 +11,9 @@
             <router-link to="/questions" class="nav-link"
               >Questions</router-link
             >
-            <router-link to="/game" class="nav-link">Game</router-link>
+            <router-link v-if="isAdmin" to="/game" class="nav-link"
+              >Game</router-link
+            >
           </div>
           <div class="nav-actions">
             <span class="user-greeting">Hello, {{ user?.name }}!</span>
@@ -39,6 +41,7 @@ export default {
 
     const isAuthenticated = computed(() => auth.isAuthenticated.value)
     const user = computed(() => auth.user.value)
+    const isAdmin = computed(() => auth.isAdmin.value)
 
     const logout = () => {
       auth.logout()
@@ -52,6 +55,7 @@ export default {
     return {
       isAuthenticated,
       user,
+      isAdmin,
       logout,
     }
   },

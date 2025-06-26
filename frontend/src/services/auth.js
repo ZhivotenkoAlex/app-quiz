@@ -8,6 +8,7 @@ export const auth = {
     token: computed(() => token.value),
     user: user,  // Export the ref directly, not as computed
     isAuthenticated: computed(() => !!token.value),
+    isAdmin: computed(() => user.value?.isAdmin || false),
 
     async login(email, password) {
         try {

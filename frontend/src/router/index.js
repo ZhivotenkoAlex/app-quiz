@@ -32,7 +32,7 @@ const routes = [
         path: '/game',
         name: 'Game',
         component: Game,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiresAdmin: true }
     }
 ]
 
@@ -44,9 +44,12 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach((to, from, next) => {
     const isAuthenticated = auth.isAuthenticated.value
+    const isAdmin = auth.isAdmin.value
 
     if (to.meta.requiresAuth && !isAuthenticated) {
         next('/login')
+    } else if (to.meta.requiresAdmin && !isAdmin) {
+        next('/dashboard')
     } else if (to.meta.requiresGuest && isAuthenticated) {
         next('/dashboard')
     } else {
