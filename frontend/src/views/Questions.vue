@@ -100,7 +100,7 @@
             <div v-for="stat in questionStats" :key="stat.id" class="stat-card">
               <div class="stat-info">
                 <h4>{{ stat.name }}</h4>
-                <p class="stat-email">{{ stat.email }}</p>
+                <!-- <p class="stat-email">{{ stat.email }}</p> -->
               </div>
               <div class="stat-count">
                 <span class="count-number">{{ stat.question_count }}</span>

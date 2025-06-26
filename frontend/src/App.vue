@@ -26,6 +26,8 @@
     <main class="main-content">
       <router-view />
     </main>
+
+    <InstallPrompt />
   </div>
 </template>
 
@@ -33,9 +35,13 @@
 import { computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "./services/auth"
+import InstallPrompt from "./components/InstallPrompt.vue"
 
 export default {
   name: "App",
+  components: {
+    InstallPrompt,
+  },
   setup() {
     const router = useRouter()
 
