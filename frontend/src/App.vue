@@ -96,6 +96,13 @@ export default {
   flex-wrap: wrap;
 }
 
+/* Prevent wrapping only above 1200px (matching container max-width) */
+@media (min-width: 1200px) {
+  .nav-content {
+    flex-wrap: nowrap;
+  }
+}
+
 .nav-brand {
   color: var(--primary-color);
   font-size: 1.5rem;
@@ -107,14 +114,23 @@ export default {
   gap: 0.5rem;
   flex: 1;
   justify-content: center;
-  overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
   padding: 0.25rem 0;
 }
 
-.nav-menu::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+/* Enable scrolling for screens below 1200px (matching container max-width) */
+@media (max-width: 1200px) {
+  .nav-menu {
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    justify-content: flex-start;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
 
 .nav-link {
