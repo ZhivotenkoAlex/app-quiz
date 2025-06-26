@@ -5,15 +5,28 @@ export default defineConfig({
     plugins: [vue()],
     base: '/',
     server: {
-        port: 3000,
+        port: 5173, // Use default Vite port
+        host: true,
         proxy: {
             '/api': {
                 target: 'http://localhost:3001',
-                changeOrigin: true
+                changeOrigin: true,
+                timeout: 10000 // 10 second timeout
             }
         }
     },
     build: {
-        outDir: 'dist'
+        outDir: 'dist',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['vue', 'vue-router', 'vue-i18n'],
+                    axios: ['axios']
+                }
+            }
+        }
+    },
+    optimizeDeps: {
+        include: ['vue', 'vue-router', 'vue-i18n', 'axios']
     }
 }) 

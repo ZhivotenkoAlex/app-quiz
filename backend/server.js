@@ -8,10 +8,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Database connection
+// Database connection with optimized settings
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/appquiz',
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 10, // Maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+    connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+    query_timeout: 5000, // Query timeout after 5 seconds
 });
 
 // Middleware
@@ -20,6 +24,18 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+
+// Request timing middleware (disabled for cleaner output)
+// app.use((req, res, next) => {
+//     const start = Date.now();
+//     res.on('finish', () => {
+//         const duration = Date.now() - start;
+//         if (duration > 1000) {
+//             console.log(`🐌 SLOW REQUEST: ${req.method} ${req.path} - ${duration}ms`);
+//         }
+//     });
+//     next();
+// });
 
 // Initialize database tables
 const initDB = async () => {
@@ -41,7 +57,7 @@ const initDB = async () => {
       ADD COLUMN IF NOT EXISTS "isAdmin" BOOLEAN DEFAULT FALSE
     `);
 
-        console.log('Database initialized');
+        // console.log('Database initialized');
     } catch (error) {
         console.error('Database initialization error:', error);
     }
@@ -59,7 +75,10 @@ const authenticateToken = (req, res, next) => {
     }
 
     jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) {
+            // console.log('🚫 Token verification failed:', err.message);
+            return res.sendStatus(401);
+        }
         req.user = user;
         next();
     });
@@ -67,7 +86,7 @@ const authenticateToken = (req, res, next) => {
 
 // Admin middleware
 const requireAdmin = (req, res, next) => {
-    console.log('Admin check - req.user:', req.user); // Debug log
+    // console.log('Admin check - req.user:', req.user);
     if (!req.user || !req.user.isAdmin) {
         return res.status(403).json({ error: 'Admin access required' });
     }
@@ -76,14 +95,24 @@ const requireAdmin = (req, res, next) => {
 
 // Routes
 app.get('/api/health', (req, res) => {
-    console.log('Health check called from:', req.get('origin'));
+    // console.log('Health check called from:', req.get('origin'));
     res.json({ status: 'OK', message: 'Server is running' });
 });
 
 // Add a simple test endpoint
 app.get('/api/test', (req, res) => {
-    console.log('Test endpoint called from:', req.get('origin'));
+    // console.log('Test endpoint called from:', req.get('origin'));
     res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() });
+});
+
+// Test endpoint that requires authentication (to trigger 401 when token expires)
+app.get('/api/test-auth', authenticateToken, (req, res) => {
+    // console.log('🔐 Authenticated test endpoint called by user:', req.user.email);
+    res.json({
+        message: 'Authentication test successful',
+        user: req.user.email,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Register user
@@ -105,7 +134,13 @@ app.post('/api/register', async (req, res) => {
         const token = jwt.sign(
             { userId: result.rows[0].id, email: result.rows[0].email, isAdmin: result.rows[0].isAdmin },
             process.env.JWT_SECRET || 'secret',
-            { expiresIn: '24h' }
+            { expiresIn: '1h' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: result.rows[0].id, type: 'refresh' },
+            process.env.JWT_SECRET || 'secret',
+            { expiresIn: '7d' }
         );
 
         res.status(201).json({
@@ -116,7 +151,8 @@ app.post('/api/register', async (req, res) => {
                 name: result.rows[0].name,
                 isAdmin: result.rows[0].isAdmin || false
             },
-            token
+            token,
+            refreshToken
         });
     } catch (error) {
         if (error.code === '23505') {
@@ -150,13 +186,19 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        console.log('User from DB:', user); // Debug log
-        console.log('isAdmin value:', user.isAdmin); // Debug log
+        // console.log('User from DB:', user);
+        // console.log('isAdmin value:', user.isAdmin);
 
         const token = jwt.sign(
             { userId: user.id, email: user.email, isAdmin: user.isAdmin },
             process.env.JWT_SECRET || 'secret',
-            { expiresIn: '24h' }
+            { expiresIn: '1m' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: user.id, type: 'refresh' },
+            process.env.JWT_SECRET || 'secret',
+            { expiresIn: '7d' }
         );
 
         const userResponse = {
@@ -166,15 +208,71 @@ app.post('/api/login', async (req, res) => {
             isAdmin: user.isAdmin || false
         };
 
-        console.log('User response:', userResponse); // Debug log
+        // console.log('User response:', userResponse);
 
         res.json({
             message: 'Login successful',
             user: userResponse,
-            token
+            token,
+            refreshToken
         });
     } catch (error) {
         console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Refresh token
+app.post('/api/refresh', async (req, res) => {
+    // console.log('🔄 Token refresh request received');
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token required' });
+        }
+
+        jwt.verify(refreshToken, process.env.JWT_SECRET || 'secret', async (err, decoded) => {
+            if (err || decoded.type !== 'refresh') {
+                return res.status(403).json({ error: 'Invalid refresh token' });
+            }
+
+            // Get user data
+            const result = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const user = result.rows[0];
+
+            // Generate new tokens
+            const newToken = jwt.sign(
+                { userId: user.id, email: user.email, isAdmin: user.isAdmin },
+                process.env.JWT_SECRET || 'secret',
+                { expiresIn: '1m' }
+            );
+
+            const newRefreshToken = jwt.sign(
+                { userId: user.id, type: 'refresh' },
+                process.env.JWT_SECRET || 'secret',
+                { expiresIn: '7d' }
+            );
+
+            // console.log('✅ Token refresh successful for user:', user.email);
+            res.json({
+                token: newToken,
+                refreshToken: newRefreshToken,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    isAdmin: user.isAdmin || false
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Refresh token error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -473,5 +571,5 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    // console.log(`Server is running on port ${PORT}`);
 }); 

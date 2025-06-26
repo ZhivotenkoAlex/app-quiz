@@ -2,10 +2,12 @@ import { ref, computed } from 'vue'
 import api from './api'
 
 const token = ref(localStorage.getItem('token'))
+const refreshToken = ref(localStorage.getItem('refreshToken'))
 const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
 
 export const auth = {
     token: computed(() => token.value),
+    refreshToken: computed(() => refreshToken.value),
     user: user,  // Export the ref directly, not as computed
     isAuthenticated: computed(() => !!token.value),
     isAdmin: computed(() => user.value?.isAdmin || false),
@@ -13,11 +15,13 @@ export const auth = {
     async login(email, password) {
         try {
             const response = await api.post('/login', { email, password })
-            const { token: newToken, user: userData } = response.data
+            const { token: newToken, refreshToken: newRefreshToken, user: userData } = response.data
 
             token.value = newToken
+            refreshToken.value = newRefreshToken
             user.value = userData
             localStorage.setItem('token', newToken)
+            localStorage.setItem('refreshToken', newRefreshToken)
             localStorage.setItem('user', JSON.stringify(userData))
 
             return { success: true }
@@ -32,11 +36,13 @@ export const auth = {
     async register(email, password, name) {
         try {
             const response = await api.post('/register', { email, password, name })
-            const { token: newToken, user: userData } = response.data
+            const { token: newToken, refreshToken: newRefreshToken, user: userData } = response.data
 
             token.value = newToken
+            refreshToken.value = newRefreshToken
             user.value = userData
             localStorage.setItem('token', newToken)
+            localStorage.setItem('refreshToken', newRefreshToken)
             localStorage.setItem('user', JSON.stringify(userData))
 
             return { success: true }
@@ -50,9 +56,37 @@ export const auth = {
 
     logout() {
         token.value = null
+        refreshToken.value = null
         user.value = null
         localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
+    },
+
+    async refreshTokens() {
+        try {
+            if (!refreshToken.value) {
+                throw new Error('No refresh token available')
+            }
+
+            const response = await api.post('/refresh', {
+                refreshToken: refreshToken.value
+            })
+
+            const { token: newToken, refreshToken: newRefreshToken, user: userData } = response.data
+
+            token.value = newToken
+            refreshToken.value = newRefreshToken
+            user.value = userData
+            localStorage.setItem('token', newToken)
+            localStorage.setItem('refreshToken', newRefreshToken)
+            localStorage.setItem('user', JSON.stringify(userData))
+
+            return { success: true }
+        } catch (error) {
+            this.logout()
+            return { success: false, error: 'Token refresh failed' }
+        }
     },
 
     async checkAuth() {
@@ -73,5 +107,17 @@ export const auth = {
     updateUser(userData) {
         user.value = userData
         localStorage.setItem('user', JSON.stringify(userData))
+    },
+
+    // Internal method for API service to update tokens
+    _updateTokens(newToken, newRefreshToken, userData) {
+        token.value = newToken
+        refreshToken.value = newRefreshToken
+        user.value = userData
     }
+}
+
+// Expose update function globally to avoid circular dependency
+if (typeof window !== 'undefined') {
+    window.__auth_update_tokens = auth._updateTokens
 } 

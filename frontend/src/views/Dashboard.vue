@@ -56,6 +56,20 @@
             >
               {{ $t("dashboard.editProfile") }}
             </button>
+            <button
+              @click="testTokenRefresh"
+              class="btn btn-primary btn-small"
+              style="margin-top: 1rem; margin-left: 0.5rem"
+            >
+              🔄 Test Token Refresh
+            </button>
+            <button
+              @click="testAuthCall"
+              class="btn btn-secondary btn-small"
+              style="margin-top: 1rem; margin-left: 0.5rem"
+            >
+              🔐 Test Auth Call
+            </button>
           </div>
         </div>
       </div>
@@ -133,7 +147,7 @@ export default {
           }
           userNotes.value = response.data.data.notes || ""
           favoriteColor.value = response.data.data.favoriteColor || ""
-          showMessage("Data loaded successfully!")
+          // showMessage("Data loaded successfully!") // Removed to reduce UI updates
         }
       } catch (error) {
         showMessage(
@@ -212,6 +226,47 @@ export default {
       }
     }
 
+    const testTokenRefresh = async () => {
+      try {
+        // console.log("🧪 Testing token refresh...")
+        // console.log("Current token:", auth.token.value?.substring(0, 20) + "...")
+
+        // Manually call the refresh endpoint
+        const result = await auth.refreshTokens()
+
+        // if (result.success) {
+        // showMessage("✅ Token refreshed successfully!")
+        // console.log("New token:", auth.token.value?.substring(0, 20) + "...")
+        // } else {
+        //   showMessage("❌ Token refresh failed: " + result.error, "alert-error")
+        // }
+      } catch (error) {
+        console.error("Token refresh test error:", error)
+        showMessage(
+          "❌ Token refresh test failed: " + error.message,
+          "alert-error"
+        )
+      }
+    }
+
+    const testAuthCall = async () => {
+      try {
+        // console.log("🔐 Testing authenticated API call...")
+        const response = await api.get("/test-auth")
+        showMessage(
+          "✅ Authenticated call successful! User: " + response.data.user
+        )
+        // console.log("Auth test response:", response.data)
+      } catch (error) {
+        console.error("Auth test error:", error)
+        showMessage(
+          "❌ Auth test failed: " +
+            (error.response?.data?.error || error.message),
+          "alert-error"
+        )
+      }
+    }
+
     onMounted(() => {
       loadUserData()
       loadQuestionCount()
@@ -237,6 +292,8 @@ export default {
       startProfileEdit,
       cancelProfileEdit,
       saveProfile,
+      testTokenRefresh,
+      testAuthCall,
       formatDate,
     }
   },
