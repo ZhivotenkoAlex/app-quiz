@@ -31,7 +31,13 @@ const messages = {
             editProfile: 'Edit Profile',
             saveProfile: 'Save Profile',
             cancelEdit: 'Cancel',
-            questionsCount: 'Questions Addressed to You'
+            questionsCount: 'Questions Addressed to You',
+            name: 'Name',
+            email: 'Email',
+            questionsCreated: 'Questions Created',
+            saving: 'Saving...',
+            save: 'Save',
+            cancel: 'Cancel'
         },
         questions: {
             title: 'Create Questions',
@@ -121,7 +127,13 @@ const messages = {
             editProfile: 'Редагувати профіль',
             saveProfile: 'Зберегти профіль',
             cancelEdit: 'Скасувати',
-            questionsCount: 'Питання адресовані вам'
+            questionsCount: 'Питання адресовані вам',
+            name: "Ім'я",
+            email: 'Електронна пошта',
+            questionsCreated: 'Створено питань',
+            saving: 'Збереження...',
+            save: 'Зберегти',
+            cancel: 'Скасувати'
         },
         questions: {
             title: 'Створити питання',

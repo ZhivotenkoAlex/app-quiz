@@ -2,13 +2,13 @@
   <div class="questions-page">
     <div class="container">
       <div class="questions-header">
-        <h1>Create Questions</h1>
-        <p>Add questions and assign them to users</p>
+        <h1>{{ $t("questions.title") }}</h1>
+        <p>{{ $t("questions.subtitle") }}</p>
       </div>
 
       <div class="questions-content">
         <div class="card">
-          <h3>Add Questions</h3>
+          <h3>{{ $t("questions.addQuestions") }}</h3>
 
           <div v-if="error" class="alert alert-error">
             {{ error }}
@@ -26,24 +26,30 @@
             >
               <div class="question-row">
                 <div class="question-input-group">
-                  <label class="form-label">Question {{ index + 1 }}</label>
+                  <label class="form-label"
+                    >{{ $t("questions.question") }} {{ index + 1 }}</label
+                  >
                   <textarea
                     v-model="question.text"
                     class="form-input question-textarea"
-                    :placeholder="`Enter question ${index + 1}...`"
+                    :placeholder="
+                      $t('questions.enterQuestion', { number: index + 1 })
+                    "
                     rows="3"
                     required
                   ></textarea>
                 </div>
 
                 <div class="addressee-group">
-                  <label class="form-label">Addressed to</label>
+                  <label class="form-label">{{
+                    $t("questions.addressedTo")
+                  }}</label>
                   <select
                     v-model="question.addresseeId"
                     class="form-input addressee-select"
                     required
                   >
-                    <option value="">Select user...</option>
+                    <option value="">{{ $t("questions.selectUser") }}</option>
                     <option
                       v-for="user in users"
                       :key="user.id"
@@ -61,7 +67,7 @@
                     class="btn btn-danger btn-small"
                     type="button"
                   >
-                    Remove
+                    {{ $t("questions.remove") }}
                   </button>
                 </div>
               </div>
@@ -73,7 +79,7 @@
                 class="btn btn-secondary"
                 type="button"
               >
-                + Add Another Question
+                + {{ $t("questions.addAnother") }}
               </button>
 
               <div class="save-section">
@@ -83,7 +89,11 @@
                   :disabled="saving || !canSave"
                 >
                   <span v-if="saving" class="loading"></span>
-                  {{ saving ? "Saving..." : "Save Questions" }}
+                  {{
+                    saving
+                      ? $t("questions.saving")
+                      : $t("questions.saveQuestions")
+                  }}
                 </button>
               </div>
             </div>
@@ -92,7 +102,7 @@
 
         <!-- Question Statistics -->
         <div class="card">
-          <h3>Questions You Created by Addressee</h3>
+          <h3>{{ $t("questions.createdBy") }}</h3>
           <div
             v-if="questionStats && questionStats.length > 0"
             class="stats-grid"
@@ -104,18 +114,20 @@
               </div>
               <div class="stat-count">
                 <span class="count-number">{{ stat.question_count }}</span>
-                <span class="count-label">questions</span>
+                <span class="count-label">{{
+                  $t("questions.question").toLowerCase()
+                }}</span>
               </div>
             </div>
           </div>
           <div v-else class="no-stats">
-            <p>No questions created yet</p>
+            <p>{{ $t("questions.noQuestions") }}</p>
           </div>
         </div>
 
         <!-- Display existing questions -->
         <div class="card" v-if="existingQuestions.length > 0">
-          <h3>My Questions</h3>
+          <h3>{{ $t("questions.myQuestions") }}</h3>
           <div class="questions-list">
             <div
               v-for="question in existingQuestions"
@@ -127,7 +139,9 @@
                 class="question-edit"
               >
                 <div class="form-group">
-                  <label class="form-label">Edit Question</label>
+                  <label class="form-label">{{
+                    $t("questions.editQuestion")
+                  }}</label>
                   <textarea
                     v-model="editForm.text"
                     class="form-input"
@@ -137,13 +151,15 @@
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Addressed to</label>
+                  <label class="form-label">{{
+                    $t("questions.addressedTo")
+                  }}</label>
                   <select
                     v-model="editForm.addresseeId"
                     class="form-input"
                     required
                   >
-                    <option value="">Select user...</option>
+                    <option value="">{{ $t("questions.selectUser") }}</option>
                     <option
                       v-for="user in users"
                       :key="user.id"
@@ -161,13 +177,15 @@
                     :disabled="updating"
                   >
                     <span v-if="updating" class="loading"></span>
-                    {{ updating ? "Saving..." : "Save" }}
+                    {{
+                      updating ? $t("questions.saving") : $t("questions.save")
+                    }}
                   </button>
                   <button
                     @click="cancelEdit"
                     class="btn btn-secondary btn-small"
                   >
-                    Cancel
+                    {{ $t("questions.cancel") }}
                   </button>
                 </div>
               </div>
@@ -176,7 +194,7 @@
                 <p class="question-text">{{ question.question_text }}</p>
                 <div class="question-meta">
                   <span class="addressee">
-                    📧 To: {{ question.addressee_name }}
+                    📧 {{ $t("questions.to") }}: {{ question.addressee_name }}
                   </span>
                   <!-- <span class="date">
                     📅 {{ formatDate(question.created_at) }}
@@ -187,7 +205,7 @@
                     @click="startEdit(question)"
                     class="btn btn-secondary btn-small"
                   >
-                    Edit
+                    {{ $t("questions.edit") }}
                   </button>
                   <button
                     @click="deleteQuestion(question.id)"
@@ -198,7 +216,11 @@
                       v-if="deleting === question.id"
                       class="loading"
                     ></span>
-                    {{ deleting === question.id ? "Deleting..." : "Delete" }}
+                    {{
+                      deleting === question.id
+                        ? $t("questions.deleting")
+                        : $t("questions.delete")
+                    }}
                   </button>
                 </div>
               </div>
@@ -212,12 +234,14 @@
 
 <script>
 import { ref, computed, onMounted } from "vue"
+import { useI18n } from "vue-i18n"
 import api from "../services/api"
 import { auth } from "../services/auth"
 
 export default {
   name: "Questions",
   setup() {
+    const { t } = useI18n()
     const users = ref([])
     const questions = ref([{ text: "", addresseeId: "" }])
     const existingQuestions = ref([])
@@ -301,16 +325,15 @@ export default {
         )
 
         if (validQuestions.length === 0) {
-          showMessage(
-            "Please add at least one valid question with an addressee",
-            "error"
-          )
+          showMessage(t("messages.addValidQuestion"), "error")
           return
         }
 
         await api.post("/questions", { questions: validQuestions })
 
-        showMessage(`Successfully saved ${validQuestions.length} question(s)!`)
+        showMessage(
+          t("messages.questionsSaved", { count: validQuestions.length })
+        )
 
         // Reset form
         questions.value = [{ text: "", addresseeId: "" }]
@@ -363,7 +386,7 @@ export default {
 
       try {
         if (!editForm.value.text.trim() || !editForm.value.addresseeId) {
-          showMessage("Please fill in all fields", "error")
+          showMessage(t("messages.fillAllFields"), "error")
           return
         }
 
@@ -372,7 +395,7 @@ export default {
           addressee_id: editForm.value.addresseeId,
         })
 
-        showMessage("Question updated successfully!")
+        showMessage(t("messages.questionUpdated"))
         cancelEdit()
         await loadQuestions()
         await loadQuestionStats()
@@ -388,7 +411,7 @@ export default {
     }
 
     const deleteQuestion = async (questionId) => {
-      if (!confirm("Are you sure you want to delete this question?")) {
+      if (!confirm(t("messages.confirmDelete"))) {
         return
       }
 
@@ -396,7 +419,7 @@ export default {
 
       try {
         await api.delete(`/questions/${questionId}`)
-        showMessage("Question deleted successfully!")
+        showMessage(t("messages.questionDeleted"))
         await loadQuestions()
         await loadQuestionStats()
       } catch (err) {

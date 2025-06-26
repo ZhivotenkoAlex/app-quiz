@@ -11,12 +11,12 @@
           <h3>{{ $t("dashboard.profile") }}</h3>
           <div v-if="editingProfile" class="profile-edit">
             <div class="form-group">
-              <label class="form-label">Name</label>
+              <label class="form-label">{{ $t("dashboard.name") }}</label>
               <input
                 v-model="profileForm.name"
                 type="text"
                 class="form-input"
-                placeholder="Enter your name"
+                :placeholder="$t('dashboard.name')"
                 required
               />
             </div>
@@ -27,23 +27,34 @@
                 :disabled="updatingProfile"
               >
                 <span v-if="updatingProfile" class="loading"></span>
-                {{ updatingProfile ? "Saving..." : "Save" }}
+                {{
+                  updatingProfile
+                    ? $t("dashboard.saving")
+                    : $t("dashboard.save")
+                }}
               </button>
               <button @click="cancelProfileEdit" class="btn btn-secondary">
-                Cancel
+                {{ $t("dashboard.cancel") }}
               </button>
             </div>
           </div>
           <div v-else class="profile-info">
-            <p><strong>Name:</strong> {{ user?.name }}</p>
-            <p><strong>Email:</strong> {{ user?.email }}</p>
-            <p><strong>Questions Created:</strong> {{ questionCount }}</p>
+            <p>
+              <strong>{{ $t("dashboard.name") }}:</strong> {{ user?.name }}
+            </p>
+            <p>
+              <strong>{{ $t("dashboard.email") }}:</strong> {{ user?.email }}
+            </p>
+            <p>
+              <strong>{{ $t("dashboard.questionsCreated") }}:</strong>
+              {{ questionCount }}
+            </p>
             <button
               @click="startProfileEdit"
               class="btn btn-secondary btn-small"
               style="margin-top: 1rem"
             >
-              Edit Profile
+              {{ $t("dashboard.editProfile") }}
             </button>
           </div>
         </div>
@@ -58,12 +69,14 @@
 
 <script>
 import { ref, computed, onMounted } from "vue"
+import { useI18n } from "vue-i18n"
 import { auth } from "../services/auth"
 import api from "../services/api"
 
 export default {
   name: "Dashboard",
   setup() {
+    const { t } = useI18n()
     const user = computed(() => auth.user.value)
     const loading = ref(false)
     const saving = ref(false)
@@ -175,7 +188,7 @@ export default {
 
       try {
         if (!profileForm.value.name.trim()) {
-          showMessage("Name is required", "alert-error")
+          showMessage(t("messages.fillAllFields"), "alert-error")
           return
         }
 
@@ -186,7 +199,7 @@ export default {
         // Update the user in auth store
         auth.updateUser(response.data.user)
 
-        showMessage("Profile updated successfully!")
+        showMessage(t("messages.profileUpdated"))
         editingProfile.value = false
       } catch (error) {
         showMessage(
