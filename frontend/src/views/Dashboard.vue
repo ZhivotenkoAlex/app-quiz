@@ -2,13 +2,13 @@
   <div class="dashboard-page">
     <div class="container">
       <div class="dashboard-header">
-        <h1>Welcome to Your Dashboard</h1>
-        <p>Manage your data and explore the app features</p>
+        <h1>{{ $t("dashboard.title") }}</h1>
+        <p>{{ $t("dashboard.subtitle") }}</p>
       </div>
 
       <div class="dashboard-grid">
         <div class="card">
-          <h3>User Profile</h3>
+          <h3>{{ $t("dashboard.profile") }}</h3>
           <div v-if="editingProfile" class="profile-edit">
             <div class="form-group">
               <label class="form-label">Name</label>

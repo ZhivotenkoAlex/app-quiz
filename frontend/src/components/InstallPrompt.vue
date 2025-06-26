@@ -3,15 +3,15 @@
     <div class="install-content">
       <div class="install-icon">📱</div>
       <div class="install-text">
-        <h3>Install Quiz App</h3>
-        <p>Add to your home screen for a better experience</p>
+        <h3>{{ $t("install.title") }}</h3>
+        <p>{{ $t("install.subtitle") }}</p>
       </div>
       <div class="install-actions">
         <button @click="installApp" class="btn btn-primary btn-small">
-          Install
+          {{ $t("install.install") }}
         </button>
         <button @click="dismissPrompt" class="btn btn-secondary btn-small">
-          Later
+          {{ $t("install.later") }}
         </button>
       </div>
     </div>

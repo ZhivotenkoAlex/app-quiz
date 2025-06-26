@@ -5,19 +5,24 @@
         <div class="nav-content">
           <h1 class="nav-brand">App Quiz</h1>
           <div class="nav-menu">
-            <router-link to="/dashboard" class="nav-link"
-              >Dashboard</router-link
-            >
-            <router-link to="/questions" class="nav-link"
-              >Questions</router-link
-            >
-            <router-link v-if="isAdmin" to="/game" class="nav-link"
-              >Game</router-link
-            >
+            <router-link to="/dashboard" class="nav-link">
+              {{ $t("nav.dashboard") }}
+            </router-link>
+            <router-link to="/questions" class="nav-link">
+              {{ $t("nav.questions") }}
+            </router-link>
+            <router-link v-if="isAdmin" to="/game" class="nav-link">
+              {{ $t("nav.game") }}
+            </router-link>
           </div>
           <div class="nav-actions">
-            <span class="user-greeting">Hello, {{ user?.name }}!</span>
-            <button @click="logout" class="btn btn-secondary">Logout</button>
+            <LanguageSwitcher />
+            <span class="user-greeting">{{
+              $t("nav.hello", { name: user?.name })
+            }}</span>
+            <button @click="logout" class="btn btn-secondary">
+              {{ $t("nav.logout") }}
+            </button>
           </div>
         </div>
       </div>
@@ -36,11 +41,13 @@ import { computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "./services/auth"
 import InstallPrompt from "./components/InstallPrompt.vue"
+import LanguageSwitcher from "./components/LanguageSwitcher.vue"
 
 export default {
   name: "App",
   components: {
     InstallPrompt,
+    LanguageSwitcher,
   },
   setup() {
     const router = useRouter()

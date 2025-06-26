@@ -1,11 +1,16 @@
 <template>
   <div class="login-page">
+    <div class="language-switcher-container">
+      <LanguageSwitcher />
+    </div>
     <div class="container">
       <div class="login-card card">
         <div class="text-center mb-4">
-          <h1 class="login-title">Welcome to App Quiz</h1>
+          <h1 class="login-title">
+            {{ $t(isLogin ? "auth.loginTitle" : "auth.registerTitle") }}
+          </h1>
           <p class="login-subtitle">
-            {{ isLogin ? "Sign in to your account" : "Create a new account" }}
+            {{ $t(isLogin ? "auth.loginSubtitle" : "auth.registerSubtitle") }}
           </p>
         </div>
 
@@ -15,34 +20,34 @@
 
         <form @submit.prevent="handleSubmit">
           <div v-if="!isLogin" class="form-group">
-            <label class="form-label">Full Name</label>
+            <label class="form-label">{{ $t("auth.name") }}</label>
             <input
               v-model="form.name"
               type="text"
               class="form-input"
-              placeholder="Enter your full name"
+              :placeholder="$t('auth.name')"
               required
             />
           </div>
 
           <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label">{{ $t("auth.email") }}</label>
             <input
               v-model="form.email"
               type="email"
               class="form-input"
-              placeholder="Enter your email"
+              :placeholder="$t('auth.email')"
               required
             />
           </div>
 
           <div class="form-group">
-            <label class="form-label">Password</label>
+            <label class="form-label">{{ $t("auth.password") }}</label>
             <input
               v-model="form.password"
               type="password"
               class="form-input"
-              placeholder="Enter your password"
+              :placeholder="$t('auth.password')"
               required
             />
           </div>
@@ -54,17 +59,19 @@
             :disabled="loading"
           >
             <span v-if="loading" class="loading"></span>
-            {{ loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up" }}
+            {{
+              loading
+                ? "..."
+                : $t(isLogin ? "auth.loginButton" : "auth.registerButton")
+            }}
           </button>
         </form>
 
         <div class="text-center" style="margin-top: 1.5rem">
           <p>
-            {{
-              isLogin ? "Don't have an account?" : "Already have an account?"
-            }}
+            {{ $t(isLogin ? "auth.noAccount" : "auth.haveAccount") }}
             <button @click="toggleMode" class="toggle-link" type="button">
-              {{ isLogin ? "Sign Up" : "Sign In" }}
+              {{ $t(isLogin ? "auth.registerButton" : "auth.loginButton") }}
             </button>
           </p>
         </div>
@@ -77,9 +84,13 @@
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "../services/auth"
+import LanguageSwitcher from "../components/LanguageSwitcher.vue"
 
 export default {
   name: "Login",
+  components: {
+    LanguageSwitcher,
+  },
   setup() {
     const router = useRouter()
     const isLogin = ref(true)
@@ -178,5 +189,12 @@ export default {
 
 .toggle-link:hover {
   color: var(--secondary-color);
+}
+
+.language-switcher-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
 }
 </style>
