@@ -8,7 +8,7 @@
 
       <div class="game-content">
         <!-- Room Selection -->
-        <!-- <div v-if="!selectedRoom && !gameStarted" class="card text-center">
+        <div v-if="!selectedRoom && !gameStarted" class="card text-center">
           <div class="room-selection">
             <h3>{{ $t("game.selectMode") }}</h3>
             <p>{{ $t("game.selectModeDesc") }}</p>
@@ -18,7 +18,7 @@
               </button>
             </div>
           </div>
-        </div> -->
+        </div>
 
         <!-- Available Rooms List -->
         <div v-if="!selectedRoom && !gameStarted" class="card">
