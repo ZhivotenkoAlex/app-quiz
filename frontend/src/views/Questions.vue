@@ -176,13 +176,11 @@
                 <p class="question-text">{{ question.question_text }}</p>
                 <div class="question-meta">
                   <span class="addressee">
-                    📧 To: {{ question.addressee_name }} ({{
-                      question.addressee_email
-                    }})
+                    📧 To: {{ question.addressee_name }}
                   </span>
-                  <span class="date">
+                  <!-- <span class="date">
                     📅 {{ formatDate(question.created_at) }}
-                  </span>
+                  </span> -->
                 </div>
                 <div class="question-actions">
                   <button
