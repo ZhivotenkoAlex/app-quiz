@@ -2,8 +2,8 @@
   <div class="game-page">
     <div class="container">
       <div class="game-header">
-        <h1>Question Game</h1>
-        <p>Answer questions one by one</p>
+        <h1>{{ $t("game.title") }}</h1>
+        <p>{{ $t("game.subtitle") }}</p>
       </div>
 
       <div class="game-content">
@@ -11,7 +11,7 @@
         <div v-if="loading" class="card text-center">
           <div class="loading-spinner">
             <div class="loading"></div>
-            <p>Loading questions...</p>
+            <p>{{ $t("game.loading") }}</p>
           </div>
         </div>
 
@@ -22,7 +22,7 @@
           </div>
           <div class="text-center">
             <button @click="loadQuestions" class="btn btn-primary">
-              Try Again
+              {{ $t("game.tryAgain") }}
             </button>
           </div>
         </div>
@@ -33,10 +33,10 @@
           class="card text-center"
         >
           <div class="no-questions">
-            <h3>No Questions Available</h3>
-            <p>There are no questions to display in the game.</p>
+            <h3>{{ $t("game.noQuestions") }}</h3>
+            <p>{{ $t("game.noQuestionsDesc") }}</p>
             <router-link to="/questions" class="btn btn-primary">
-              Create Questions
+              {{ $t("game.createQuestions") }}
             </router-link>
           </div>
         </div>
@@ -44,14 +44,14 @@
         <!-- Game Complete State -->
         <div v-else-if="gameComplete" class="card text-center">
           <div class="game-complete">
-            <h3>🎉 Game Complete!</h3>
-            <p>You've answered all {{ totalQuestions }} questions!</p>
+            <h3>🎉 {{ $t("game.completed") }}</h3>
+            <p>{{ $t("game.answeredAll", { count: totalQuestions }) }}</p>
             <div class="complete-actions">
               <button @click="restartGame" class="btn btn-primary">
-                Play Again
+                {{ $t("game.playAgain") }}
               </button>
               <router-link to="/questions" class="btn btn-secondary">
-                Add More Questions
+                {{ $t("game.addMore") }}
               </router-link>
             </div>
           </div>
@@ -67,7 +67,12 @@
               ></div>
             </div>
             <p class="progress-text">
-              Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}
+              {{
+                $t("game.progress", {
+                  current: currentQuestionIndex + 1,
+                  total: totalQuestions,
+                })
+              }}
             </p>
           </div>
 
@@ -83,15 +88,15 @@
 
           <div class="game-actions">
             <button @click="nextQuestion" class="btn btn-primary btn-large">
-              {{ isLastQuestion ? "Finish" : "Next" }}
+              {{ isLastQuestion ? $t("game.finish") : $t("game.next") }}
             </button>
 
             <div class="game-controls">
               <button @click="restartGame" class="btn btn-secondary btn-small">
-                Restart
+                {{ $t("game.restart") }}
               </button>
               <button @click="skipQuestion" class="btn btn-secondary btn-small">
-                Skip
+                {{ $t("game.skip") }}
               </button>
             </div>
           </div>
@@ -103,11 +108,13 @@
 
 <script>
 import { ref, computed, onMounted } from "vue"
+import { useI18n } from "vue-i18n"
 import api from "../services/api"
 
 export default {
   name: "Game",
   setup() {
+    const { t } = useI18n()
     const questions = ref([])
     const currentQuestionIndex = ref(0)
     const shownQuestions = ref(new Set())
@@ -147,7 +154,8 @@ export default {
         }
       } catch (err) {
         error.value =
-          "Failed to load questions: " +
+          t("game.failedToLoad") +
+          ": " +
           (err.response?.data?.error || err.message)
       } finally {
         loading.value = false
