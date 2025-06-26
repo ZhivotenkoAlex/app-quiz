@@ -90,6 +90,28 @@
           </div>
         </div>
 
+        <!-- Question Statistics -->
+        <div class="card" v-if="questionStats.length > 0">
+          <h3>Question Statistics</h3>
+          <div class="stats-grid">
+            <div
+              v-for="stat in questionStats"
+              :key="stat.id"
+              class="stat-card"
+              :class="{ 'current-user': stat.id === currentUserId }"
+            >
+              <div class="stat-info">
+                <h4>{{ stat.name }}</h4>
+                <p class="stat-email">{{ stat.email }}</p>
+              </div>
+              <div class="stat-count">
+                <span class="count-number">{{ stat.question_count }}</span>
+                <span class="count-label">questions</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Display existing questions -->
         <div class="card" v-if="existingQuestions.length > 0">
           <h3>My Questions</h3>
@@ -192,6 +214,7 @@
 <script>
 import { ref, computed, onMounted } from "vue"
 import api from "../services/api"
+import { auth } from "../services/auth"
 
 export default {
   name: "Questions",
@@ -199,6 +222,7 @@ export default {
     const users = ref([])
     const questions = ref([{ text: "", addresseeId: "" }])
     const existingQuestions = ref([])
+    const questionStats = ref([])
     const loading = ref(false)
     const saving = ref(false)
     const updating = ref(false)
@@ -207,6 +231,8 @@ export default {
     const success = ref("")
     const editingQuestion = ref(null)
     const editForm = ref({ text: "", addresseeId: "" })
+
+    const currentUserId = computed(() => auth.user.value?.id)
 
     const canSave = computed(() => {
       return questions.value.some((q) => q.text.trim() && q.addresseeId)
@@ -248,6 +274,15 @@ export default {
       }
     }
 
+    const loadQuestionStats = async () => {
+      try {
+        const response = await api.get("/questions/stats")
+        questionStats.value = response.data.stats
+      } catch (err) {
+        console.error("Failed to load question stats:", err)
+      }
+    }
+
     const addQuestion = () => {
       questions.value.push({ text: "", addresseeId: "" })
     }
@@ -279,8 +314,9 @@ export default {
         // Reset form
         questions.value = [{ text: "", addresseeId: "" }]
 
-        // Reload questions
+        // Reload questions and stats
         await loadQuestions()
+        await loadQuestionStats()
       } catch (err) {
         showMessage(
           "Failed to save questions: " +
@@ -338,6 +374,7 @@ export default {
         showMessage("Question updated successfully!")
         cancelEdit()
         await loadQuestions()
+        await loadQuestionStats()
       } catch (err) {
         showMessage(
           "Failed to update question: " +
@@ -360,6 +397,7 @@ export default {
         await api.delete(`/questions/${questionId}`)
         showMessage("Question deleted successfully!")
         await loadQuestions()
+        await loadQuestionStats()
       } catch (err) {
         showMessage(
           "Failed to delete question: " +
@@ -373,7 +411,7 @@ export default {
 
     onMounted(async () => {
       loading.value = true
-      await Promise.all([loadUsers(), loadQuestions()])
+      await Promise.all([loadUsers(), loadQuestions(), loadQuestionStats()])
       loading.value = false
     })
 
@@ -381,6 +419,8 @@ export default {
       users,
       questions,
       existingQuestions,
+      questionStats,
+      currentUserId,
       loading,
       saving,
       updating,
@@ -561,6 +601,69 @@ export default {
   gap: 0.25rem;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.current-user {
+  border-color: var(--primary-color);
+  background: linear-gradient(135deg, #f8f9ff 0%, #e6f3ff 100%);
+}
+
+.stat-info h4 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stat-email {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.stat-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.count-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1;
+}
+
+.count-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 @media (max-width: 768px) {
   .question-row {
     grid-template-columns: 1fr;
@@ -580,6 +683,10 @@ export default {
   .question-meta {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -259,6 +259,28 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     }
 });
 
+// Get question counts by user
+app.get('/api/questions/stats', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                u.id,
+                u.name,
+                u.email,
+                COUNT(q.id) as question_count
+            FROM users u
+            LEFT JOIN questions q ON u.id = q.created_by
+            GROUP BY u.id, u.name, u.email
+            ORDER BY question_count DESC, u.name ASC
+        `);
+
+        res.json({ stats: result.rows });
+    } catch (error) {
+        console.error('Get question stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Save questions
 app.post('/api/questions', authenticateToken, async (req, res) => {
     try {
