@@ -34,6 +34,13 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+        // Add is_admin column if it doesn't exist (for existing databases)
+        await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
+    `);
+
         console.log('Database initialized');
     } catch (error) {
         console.error('Database initialization error:', error);
@@ -142,20 +149,27 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
+        console.log('User from DB:', user); // Debug log
+        console.log('is_admin value:', user.is_admin); // Debug log
+
         const token = jwt.sign(
             { userId: user.id, email: user.email, isAdmin: user.is_admin },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
 
+        const userResponse = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            isAdmin: user.is_admin || false
+        };
+
+        console.log('User response:', userResponse); // Debug log
+
         res.json({
             message: 'Login successful',
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                isAdmin: user.is_admin || false
-            },
+            user: userResponse,
             token
         });
     } catch (error) {

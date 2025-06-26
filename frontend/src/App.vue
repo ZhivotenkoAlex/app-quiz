@@ -41,7 +41,9 @@ export default {
 
     const isAuthenticated = computed(() => auth.isAuthenticated.value)
     const user = computed(() => auth.user.value)
+    console.log("🚀 ~ setup ~ user:", user.value)
     const isAdmin = computed(() => auth.isAdmin.value)
+    console.log("🚀 ~ setup ~ isAdmin:", isAdmin.value)
 
     const logout = () => {
       auth.logout()
