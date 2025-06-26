@@ -399,8 +399,15 @@ app.post('/api/questions', authenticateToken, async (req, res) => {
         question_text TEXT NOT NULL,
         addressee_id INTEGER REFERENCES users(id),
         created_by INTEGER REFERENCES users(id),
+        included_in_game BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+        // Add included_in_game column if it doesn't exist (for existing databases)
+        await pool.query(`
+      ALTER TABLE questions 
+      ADD COLUMN IF NOT EXISTS included_in_game BOOLEAN DEFAULT TRUE
     `);
 
         // Insert all questions
@@ -435,6 +442,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
         q.question_text,
         q.created_at,
         q.addressee_id,
+        q.included_in_game,
         u_addressee.name as addressee_name,
         u_addressee.email as addressee_email,
         u_creator.name as creator_name
@@ -462,6 +470,7 @@ app.get('/api/game/questions', authenticateToken, requireAdmin, async (req, res)
         u_addressee.name as addressee_name
       FROM questions q
       LEFT JOIN users u_addressee ON q.addressee_id = u_addressee.id
+      WHERE q.included_in_game = TRUE
       ORDER BY RANDOM()
     `);
 
@@ -508,6 +517,46 @@ app.put('/api/questions/:id', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Update question error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Toggle question inclusion in game
+app.patch('/api/questions/:id/toggle-game', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        // Check if user owns this question
+        const checkOwnership = await pool.query(
+            'SELECT created_by, included_in_game FROM questions WHERE id = $1',
+            [id]
+        );
+
+        if (checkOwnership.rows.length === 0) {
+            return res.status(404).json({ error: 'Question not found' });
+        }
+
+        if (checkOwnership.rows[0].created_by !== userId) {
+            return res.status(403).json({ error: 'Not authorized to modify this question' });
+        }
+
+        // Toggle the included_in_game status
+        const currentStatus = checkOwnership.rows[0].included_in_game;
+        const newStatus = !currentStatus;
+
+        const result = await pool.query(
+            'UPDATE questions SET included_in_game = $1 WHERE id = $2 RETURNING *',
+            [newStatus, id]
+        );
+
+        res.json({
+            message: `Question ${newStatus ? 'included in' : 'excluded from'} game`,
+            question: result.rows[0],
+            included_in_game: newStatus
+        });
+    } catch (error) {
+        console.error('Toggle game inclusion error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -65,7 +65,9 @@ const messages = {
             filterByUser: 'Filter by User',
             allUsers: 'All Users',
             questionsShown: 'questions shown',
-            clearFilter: 'Clear'
+            clearFilter: 'Clear',
+            inGame: 'Excluded from Game',
+            notInGame: 'Included in Game'
         },
         game: {
             title: 'Question Game',
@@ -208,7 +210,9 @@ const messages = {
             filterByUser: 'Фільтр за користувачем',
             allUsers: 'Всі користувачі',
             questionsShown: 'питань показано',
-            clearFilter: 'Очистити'
+            clearFilter: 'Очистити',
+            inGame: 'Виключити з гри',
+            notInGame: 'Включити в гру'
         },
         game: {
             title: 'Гра з питаннями',

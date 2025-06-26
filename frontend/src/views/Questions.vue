@@ -169,6 +169,10 @@
               v-for="question in filteredQuestions"
               :key="question.id"
               class="question-card"
+              :class="{
+                'included-in-game': question.included_in_game,
+                'excluded-from-game': !question.included_in_game,
+              }"
             >
               <div
                 v-if="editingQuestion?.id === question.id"
@@ -238,6 +242,29 @@
                 </div>
                 <div class="question-actions">
                   <button
+                    @click="toggleGameInclusion(question.id)"
+                    class="btn btn-small toggle-game-btn"
+                    :class="
+                      question.included_in_game
+                        ? 'btn-included'
+                        : 'btn-excluded'
+                    "
+                    :disabled="toggling === question.id"
+                  >
+                    <span
+                      v-if="toggling === question.id"
+                      class="loading"
+                    ></span>
+                    <span v-else>
+                      {{ question.included_in_game ? "✓" : "✗" }}
+                      {{
+                        question.included_in_game
+                          ? $t("questions.inGame")
+                          : $t("questions.notInGame")
+                      }}
+                    </span>
+                  </button>
+                  <button
                     @click="startEdit(question)"
                     class="btn btn-secondary btn-small"
                   >
@@ -286,6 +313,7 @@ export default {
     const saving = ref(false)
     const updating = ref(false)
     const deleting = ref(null)
+    const toggling = ref(null)
     const error = ref("")
     const success = ref("")
     const editingQuestion = ref(null)
@@ -472,6 +500,33 @@ export default {
       }
     }
 
+    const toggleGameInclusion = async (questionId) => {
+      toggling.value = questionId
+
+      try {
+        const response = await api.patch(`/questions/${questionId}/toggle-game`)
+
+        // Update the question in the existing list
+        const questionIndex = existingQuestions.value.findIndex(
+          (q) => q.id === questionId
+        )
+        if (questionIndex !== -1) {
+          existingQuestions.value[questionIndex].included_in_game =
+            response.data.included_in_game
+        }
+
+        showMessage(response.data.message)
+      } catch (err) {
+        showMessage(
+          "Failed to toggle game inclusion: " +
+            (err.response?.data?.error || err.message),
+          "error"
+        )
+      } finally {
+        toggling.value = null
+      }
+    }
+
     const deleteQuestion = async (questionId) => {
       if (!confirm(t("messages.confirmDelete"))) {
         return
@@ -512,6 +567,7 @@ export default {
       saving,
       updating,
       deleting,
+      toggling,
       error,
       success,
       canSave,
@@ -526,6 +582,7 @@ export default {
       startEdit,
       cancelEdit,
       saveEdit,
+      toggleGameInclusion,
       deleteQuestion,
       formatDate,
     }
@@ -680,6 +737,34 @@ export default {
   white-space: nowrap;
 }
 
+.toggle-game-btn {
+  font-weight: 600;
+  min-width: 120px;
+  transition: all 0.3s ease;
+}
+
+.btn-excluded {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.btn-excluded:hover {
+  background: #218838;
+  border-color: #1e7e34;
+}
+
+.btn-included {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+.btn-included:hover {
+  background: #5a6268;
+  border-color: #545b62;
+}
+
 .questions-list {
   display: flex;
   flex-direction: column;
@@ -691,6 +776,20 @@ export default {
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.question-card.included-in-game {
+  background: #d4edda;
+  border-color: #28a745;
+  border-left: 4px solid #28a745;
+}
+
+.question-card.excluded-from-game {
+  background: #f8f9fa;
+  border-color: #6c757d;
+  border-left: 4px solid #6c757d;
+  opacity: 0.7;
 }
 
 .question-edit {
