@@ -7,6 +7,127 @@
       </div>
 
       <div class="game-content">
+        <!-- Room Selection -->
+        <div v-if="!selectedRoom && !gameStarted" class="card text-center">
+          <div class="room-selection">
+            <h3>{{ $t("game.selectMode") }}</h3>
+            <p>{{ $t("game.selectModeDesc") }}</p>
+            <div class="mode-actions">
+              <button @click="playWithoutRoom" class="btn btn-primary">
+                {{ $t("game.playAll") }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Rooms List -->
+        <div v-if="!selectedRoom && !gameStarted" class="card">
+          <div class="available-rooms">
+            <h3>{{ $t("game.availableRooms") }}</h3>
+            <div v-if="loadingRooms" class="loading-rooms">
+              {{ $t("common.loading") }}...
+            </div>
+            <div
+              v-else-if="availableRooms.length === 0"
+              class="no-available-rooms"
+            >
+              {{ $t("game.noAvailableRooms") }}
+            </div>
+            <div v-else class="rooms-list">
+              <div
+                v-for="room in availableRooms"
+                :key="room.id"
+                class="room-item"
+                @click="openJoinModal(room)"
+              >
+                <div class="room-item-header">
+                  <h4>{{ room.name }}</h4>
+                  <span class="room-number">#{{ room.room_number }}</span>
+                </div>
+                <div class="room-item-info">
+                  <span
+                    >{{ $t("rooms.creator") }}: {{ room.creator_name }}</span
+                  >
+                  <span
+                    >{{ $t("rooms.members") }}: {{ room.member_count }}</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Join Room Modal -->
+        <div v-if="showJoinModal" class="modal-overlay" @click="closeJoinModal">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <h3>{{ $t("game.joinRoom") }}: {{ selectedRoomToJoin?.name }}</h3>
+              <button @click="closeJoinModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form @submit.prevent="joinSelectedRoom">
+                <div class="form-group">
+                  <label for="modalRoomPassword">{{
+                    $t("rooms.password")
+                  }}</label>
+                  <input
+                    id="modalRoomPassword"
+                    v-model="joinModalPassword"
+                    type="password"
+                    :placeholder="$t('rooms.passwordPlaceholder')"
+                    required
+                    ref="passwordInput"
+                  />
+                </div>
+                <div class="form-actions">
+                  <button
+                    type="submit"
+                    :disabled="isJoiningRoom"
+                    class="btn btn-primary"
+                  >
+                    {{
+                      isJoiningRoom
+                        ? $t("common.loading")
+                        : $t("game.startGame")
+                    }}
+                  </button>
+                  <button
+                    type="button"
+                    @click="closeJoinModal"
+                    class="btn btn-secondary"
+                  >
+                    {{ $t("common.cancel") }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Room Info -->
+        <div v-else-if="selectedRoom" class="card room-info-card">
+          <div class="room-info">
+            <h4>
+              {{ $t("game.playingInRoom") }}: {{ selectedRoom.name }} (#{{
+                selectedRoom.room_number
+              }})
+            </h4>
+            <button @click="exitRoom" class="btn btn-secondary btn-small">
+              {{ $t("game.exitRoom") }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Playing All Questions Info -->
+        <div v-else-if="gameStarted" class="card room-info-card">
+          <div class="room-info">
+            <h4>{{ $t("game.playingAllQuestions") }}</h4>
+            <button @click="backToMenu" class="btn btn-secondary btn-small">
+              {{ $t("game.backToMenu") }}
+            </button>
+          </div>
+        </div>
+
         <!-- Loading State -->
         <div v-if="loading" class="card text-center">
           <div class="loading-spinner">
@@ -107,7 +228,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, nextTick } from "vue"
 import { useI18n } from "vue-i18n"
 import api from "../services/api"
 
@@ -121,6 +242,14 @@ export default {
     const loading = ref(false)
     const error = ref("")
     const gameComplete = ref(false)
+    const selectedRoom = ref(null)
+    const isJoiningRoom = ref(false)
+    const availableRooms = ref([])
+    const loadingRooms = ref(false)
+    const showJoinModal = ref(false)
+    const selectedRoomToJoin = ref(null)
+    const joinModalPassword = ref("")
+    const gameStarted = ref(false)
 
     const currentQuestion = computed(() => {
       return questions.value[currentQuestionIndex.value] || null
@@ -142,7 +271,11 @@ export default {
       error.value = ""
 
       try {
-        const response = await api.get("/game/questions")
+        const url = selectedRoom.value
+          ? `/game/questions?room_id=${selectedRoom.value.id}`
+          : "/game/questions"
+
+        const response = await api.get(url)
         questions.value = response.data.questions
 
         if (questions.value.length === 0) {
@@ -160,6 +293,88 @@ export default {
       } finally {
         loading.value = false
       }
+    }
+
+    const loadAvailableRooms = async () => {
+      loadingRooms.value = true
+      try {
+        const response = await api.get("/rooms/available")
+        availableRooms.value = response.data.rooms
+      } catch (err) {
+        error.value = "Failed to load available rooms"
+      } finally {
+        loadingRooms.value = false
+      }
+    }
+
+    const playWithoutRoom = () => {
+      selectedRoom.value = null
+      gameStarted.value = true
+      localStorage.removeItem("selectedRoom")
+      loadQuestions()
+    }
+
+    const openJoinModal = (room) => {
+      selectedRoomToJoin.value = room
+      joinModalPassword.value = ""
+      showJoinModal.value = true
+      // Focus password input after modal opens
+      nextTick(() => {
+        const passwordInput = document.getElementById("modalRoomPassword")
+        if (passwordInput) passwordInput.focus()
+      })
+    }
+
+    const closeJoinModal = () => {
+      showJoinModal.value = false
+      selectedRoomToJoin.value = null
+      joinModalPassword.value = ""
+    }
+
+    const joinSelectedRoom = async () => {
+      if (!joinModalPassword.value.trim()) {
+        error.value = "Please enter the room password"
+        return
+      }
+
+      isJoiningRoom.value = true
+      try {
+        const joinData = {
+          room_number: selectedRoomToJoin.value.room_number,
+          password: joinModalPassword.value,
+        }
+
+        const response = await api.post("/rooms/join", joinData)
+        selectedRoom.value = response.data.room
+        closeJoinModal()
+        await loadQuestions()
+      } catch (err) {
+        error.value = err.response?.data?.error || "Failed to join room"
+      } finally {
+        isJoiningRoom.value = false
+      }
+    }
+
+    const exitRoom = async () => {
+      if (selectedRoom.value) {
+        try {
+          // Leave the room in the backend
+          await api.post(`/rooms/${selectedRoom.value.id}/leave`)
+        } catch (err) {
+          // Even if leaving fails, we still exit locally
+          console.error("Failed to leave room:", err)
+        }
+      }
+
+      selectedRoom.value = null
+      gameStarted.value = false
+      localStorage.removeItem("selectedRoom")
+      questions.value = []
+      gameComplete.value = false
+      error.value = ""
+
+      // Reload available rooms to show updated member counts
+      await loadAvailableRooms()
     }
 
     const nextQuestion = () => {
@@ -186,8 +401,29 @@ export default {
       loadQuestions()
     }
 
+    const backToMenu = () => {
+      gameStarted.value = false
+      selectedRoom.value = null
+      questions.value = []
+      gameComplete.value = false
+      error.value = ""
+      loadAvailableRooms()
+    }
+
     onMounted(() => {
-      loadQuestions()
+      // Check if room was selected from Rooms page
+      const storedRoom = localStorage.getItem("selectedRoom")
+      if (storedRoom) {
+        try {
+          selectedRoom.value = JSON.parse(storedRoom)
+          loadQuestions()
+        } catch (e) {
+          localStorage.removeItem("selectedRoom")
+        }
+      } else {
+        // Load available rooms for selection
+        loadAvailableRooms()
+      }
     })
 
     return {
@@ -198,12 +434,27 @@ export default {
       loading,
       error,
       gameComplete,
+      selectedRoom,
+      gameStarted,
+      availableRooms,
+      loadingRooms,
+      showJoinModal,
+      selectedRoomToJoin,
+      joinModalPassword,
+      isJoiningRoom,
       progressPercentage,
       isLastQuestion,
       loadQuestions,
+      loadAvailableRooms,
+      playWithoutRoom,
+      openJoinModal,
+      closeJoinModal,
+      joinSelectedRoom,
+      exitRoom,
       nextQuestion,
       skipQuestion,
       restartGame,
+      backToMenu,
     }
   },
 }
@@ -354,6 +605,211 @@ export default {
   min-width: 80px;
 }
 
+.room-selection,
+.room-join {
+  padding: 2rem;
+  text-align: center;
+}
+
+.room-selection h3,
+.room-join h3 {
+  color: var(--text-color);
+  margin-bottom: 1rem;
+}
+
+.room-selection p {
+  color: var(--text-light);
+  margin-bottom: 2rem;
+}
+
+.mode-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.room-info-card {
+  margin-bottom: 1rem;
+}
+
+.room-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.room-info h4 {
+  margin: 0;
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+.available-rooms {
+  text-align: left;
+  padding: 1.5rem;
+}
+
+.available-rooms h3 {
+  color: var(--text-color);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.loading-rooms,
+.no-available-rooms {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+.rooms-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.room-item {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.room-item:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.room-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.room-item-header h4 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.1rem;
+}
+
+.room-item-header .room-number {
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.room-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  min-width: 400px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
 @media (max-width: 768px) {
   .game-header h1 {
     font-size: 2rem;
@@ -382,6 +838,32 @@ export default {
   .complete-actions {
     flex-direction: column;
     align-items: center;
+  }
+
+  .mode-actions,
+  .form-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .room-info {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .rooms-list {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    min-width: 300px;
+    margin: 1rem;
+  }
+
+  .modal-header,
+  .modal-body {
+    padding: 1rem;
   }
 }
 </style>

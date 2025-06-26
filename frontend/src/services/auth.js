@@ -117,6 +117,9 @@ export const auth = {
     }
 }
 
+// Export user ref directly for components that need it
+export { user }
+
 // Expose update function globally to avoid circular dependency
 if (typeof window !== 'undefined') {
     window.__auth_update_tokens = auth._updateTokens

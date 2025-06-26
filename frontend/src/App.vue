@@ -11,7 +11,10 @@
             <router-link to="/questions" class="nav-link">
               {{ $t("nav.questions") }}
             </router-link>
-            <router-link v-if="isAdmin" to="/game" class="nav-link">
+            <router-link to="/rooms" class="nav-link">
+              {{ $t("nav.rooms") }}
+            </router-link>
+            <router-link to="/game" class="nav-link">
               {{ $t("nav.game") }}
             </router-link>
             <router-link to="/about" class="nav-link">

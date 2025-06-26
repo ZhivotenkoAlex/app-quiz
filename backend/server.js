@@ -460,19 +460,64 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
     }
 });
 
-// Get all questions for game (random order) - Admin only
-app.get('/api/game/questions', authenticateToken, requireAdmin, async (req, res) => {
+// Get game questions (random order, filtered by room if specified)
+app.get('/api/game/questions', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(`
-      SELECT 
-        q.id,
-        q.question_text,
-        u_addressee.name as addressee_name
-      FROM questions q
-      LEFT JOIN users u_addressee ON q.addressee_id = u_addressee.id
-      WHERE q.included_in_game = TRUE
-      ORDER BY RANDOM()
-    `);
+        const { room_id } = req.query;
+        const userId = req.user.userId;
+
+        let query;
+        let params;
+
+        if (room_id) {
+            // Verify user is in the room
+            const memberCheck = await pool.query(
+                'SELECT id FROM room_members WHERE room_id = $1 AND user_id = $2',
+                [room_id, userId]
+            );
+
+            if (memberCheck.rows.length === 0) {
+                return res.status(403).json({ error: 'You are not a member of this room' });
+            }
+
+            // Get questions from users in the room, addressed to users in the room
+            query = `
+                SELECT 
+                    q.id,
+                    q.question_text,
+                    q.addressee_id,
+                    u.name as addressee_name,
+                    u.email as addressee_email
+                FROM questions q
+                LEFT JOIN users u ON q.addressee_id = u.id
+                WHERE q.included_in_game = TRUE
+                AND q.created_by IN (
+                    SELECT user_id FROM room_members WHERE room_id = $1
+                )
+                AND q.addressee_id IN (
+                    SELECT user_id FROM room_members WHERE room_id = $1
+                )
+                ORDER BY RANDOM()
+            `;
+            params = [room_id];
+        } else {
+            // Original behavior - all questions
+            query = `
+                SELECT 
+                    q.id,
+                    q.question_text,
+                    q.addressee_id,
+                    u.name as addressee_name,
+                    u.email as addressee_email
+                FROM questions q
+                LEFT JOIN users u ON q.addressee_id = u.id
+                WHERE q.included_in_game = TRUE
+                ORDER BY RANDOM()
+            `;
+            params = [];
+        }
+
+        const result = await pool.query(query, params);
 
         res.json({ questions: result.rows });
     } catch (error) {
@@ -586,6 +631,276 @@ app.delete('/api/questions/:id', authenticateToken, async (req, res) => {
         res.json({ message: 'Question deleted successfully' });
     } catch (error) {
         console.error('Delete question error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Generate random 3-digit room number
+const generateRoomNumber = async () => {
+    let roomNumber;
+    let isUnique = false;
+
+    while (!isUnique) {
+        roomNumber = Math.floor(100 + Math.random() * 900).toString();
+        const existing = await pool.query('SELECT id FROM rooms WHERE room_number = $1', [roomNumber]);
+        isUnique = existing.rows.length === 0;
+    }
+
+    return roomNumber;
+};
+
+// Create room
+app.post('/api/rooms', authenticateToken, async (req, res) => {
+    try {
+        const { name, password } = req.body;
+        const createdBy = req.user.userId;
+
+        if (!name || !password) {
+            return res.status(400).json({ error: 'Room name and password are required' });
+        }
+
+        if (password.length < 3) {
+            return res.status(400).json({ error: 'Password must be at least 3 characters long' });
+        }
+
+        const roomNumber = await generateRoomNumber();
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const result = await pool.query(
+            'INSERT INTO rooms (room_number, name, password, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+            [roomNumber, name, hashedPassword, createdBy]
+        );
+
+        // Add creator as first member
+        await pool.query(
+            'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)',
+            [result.rows[0].id, createdBy]
+        );
+
+        res.status(201).json({
+            message: 'Room created successfully',
+            room: {
+                id: result.rows[0].id,
+                room_number: result.rows[0].room_number,
+                name: result.rows[0].name,
+                created_by: result.rows[0].created_by,
+                created_at: result.rows[0].created_at
+            }
+        });
+    } catch (error) {
+        console.error('Create room error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Join room
+app.post('/api/rooms/join', authenticateToken, async (req, res) => {
+    try {
+        const { room_number, password } = req.body;
+        const userId = req.user.userId;
+
+        if (!room_number || !password) {
+            return res.status(400).json({ error: 'Room number and password are required' });
+        }
+
+        // Find room
+        const roomResult = await pool.query('SELECT * FROM rooms WHERE room_number = $1', [room_number]);
+
+        if (roomResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        const room = roomResult.rows[0];
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, room.password);
+        if (!isValidPassword) {
+            return res.status(400).json({ error: 'Invalid password' });
+        }
+
+        // Check if user is already a member
+        const existingMember = await pool.query(
+            'SELECT id FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [room.id, userId]
+        );
+
+        if (existingMember.rows.length === 0) {
+            // Add user to room
+            await pool.query(
+                'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)',
+                [room.id, userId]
+            );
+        }
+
+        res.json({
+            message: 'Successfully joined room',
+            room: {
+                id: room.id,
+                room_number: room.room_number,
+                name: room.name,
+                created_by: room.created_by
+            }
+        });
+    } catch (error) {
+        console.error('Join room error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get user statistics (admin only)
+app.get('/api/admin/user-stats', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (!req.user.isAdmin) {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        const result = await pool.query(`
+            SELECT 
+                u.name as creator_name,
+                addressee.name as addressee_name,
+                COUNT(q.id) as question_count
+            FROM users u
+            LEFT JOIN questions q ON u.id = q.created_by
+            LEFT JOIN users addressee ON q.addressee_id = addressee.id
+            WHERE q.id IS NOT NULL
+            GROUP BY u.id, u.name, addressee.id, addressee.name
+            ORDER BY u.name, addressee.name
+        `);
+
+        // Group by creator
+        const stats = {};
+        result.rows.forEach(row => {
+            if (!stats[row.creator_name]) {
+                stats[row.creator_name] = {
+                    creator_name: row.creator_name,
+                    total_questions: 0,
+                    by_addressee: []
+                };
+            }
+            stats[row.creator_name].total_questions += parseInt(row.question_count);
+            stats[row.creator_name].by_addressee.push({
+                addressee_name: row.addressee_name,
+                question_count: parseInt(row.question_count)
+            });
+        });
+
+        res.json({ stats: Object.values(stats) });
+    } catch (error) {
+        console.error('Get user stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get all available rooms (for discovery)
+app.get('/api/rooms/available', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                r.id,
+                r.room_number,
+                r.name,
+                r.created_by,
+                r.created_at,
+                u.name as creator_name,
+                COUNT(rm.user_id) as member_count
+            FROM rooms r
+            LEFT JOIN users u ON r.created_by = u.id
+            LEFT JOIN room_members rm ON r.id = rm.room_id
+            GROUP BY r.id, r.room_number, r.name, r.created_by, r.created_at, u.name
+            ORDER BY r.created_at DESC
+        `);
+
+        res.json({ rooms: result.rows });
+    } catch (error) {
+        console.error('Get available rooms error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get user's rooms
+app.get('/api/rooms/my-rooms', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        const result = await pool.query(`
+            SELECT 
+                r.id,
+                r.room_number,
+                r.name,
+                r.created_by,
+                r.created_at,
+                u.name as creator_name,
+                COUNT(rm.user_id) as member_count
+            FROM rooms r
+            LEFT JOIN users u ON r.created_by = u.id
+            LEFT JOIN room_members rm ON r.id = rm.room_id
+            WHERE r.id IN (
+                SELECT room_id FROM room_members WHERE user_id = $1
+            )
+            GROUP BY r.id, r.room_number, r.name, r.created_by, r.created_at, u.name
+            ORDER BY r.created_at DESC
+        `, [userId]);
+
+        res.json({ rooms: result.rows });
+    } catch (error) {
+        console.error('Get user rooms error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Leave room
+app.post('/api/rooms/:id/leave', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        // Check if user is a member of the room
+        const memberCheck = await pool.query(
+            'SELECT id FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (memberCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'You are not a member of this room' });
+        }
+
+        // Remove user from room
+        await pool.query(
+            'DELETE FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        res.json({ message: 'Successfully left the room' });
+    } catch (error) {
+        console.error('Leave room error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete room (only creator can delete)
+app.delete('/api/rooms/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        // Check if user is the creator
+        const roomResult = await pool.query('SELECT created_by FROM rooms WHERE id = $1', [id]);
+
+        if (roomResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        if (roomResult.rows[0].created_by !== userId) {
+            return res.status(403).json({ error: 'Only the room creator can delete the room' });
+        }
+
+        // Delete room (cascade will delete room_members)
+        await pool.query('DELETE FROM rooms WHERE id = $1', [id]);
+
+        res.json({ message: 'Room deleted successfully' });
+    } catch (error) {
+        console.error('Delete room error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

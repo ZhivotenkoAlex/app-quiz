@@ -5,6 +5,7 @@ const messages = {
         nav: {
             dashboard: 'Dashboard',
             questions: 'Questions',
+            rooms: 'Rooms',
             game: 'Game',
             about: 'About',
             logout: 'Logout',
@@ -38,7 +39,10 @@ const messages = {
             questionsCreated: 'Questions Created',
             saving: 'Saving...',
             save: 'Save',
-            cancel: 'Cancel'
+            cancel: 'Cancel',
+            userStats: 'User Statistics',
+            noStats: 'No statistics available',
+            totalQuestions: 'Total Questions'
         },
         questions: {
             title: 'Create Questions',
@@ -69,6 +73,28 @@ const messages = {
             inGame: 'Excluded from Game',
             notInGame: 'Included in Game'
         },
+        rooms: {
+            title: 'Game Rooms',
+            subtitle: 'Create or join rooms to play with specific groups',
+            createRoom: 'Create Room',
+            joinRoom: 'Join Room',
+            myRooms: 'My Rooms',
+            roomName: 'Room Name',
+            roomNamePlaceholder: 'Enter room name...',
+            roomPassword: 'Room Password',
+            roomPasswordPlaceholder: 'Enter password (min 3 characters)...',
+            roomNumber: 'Room Number',
+            roomNumberPlaceholder: '123',
+            password: 'Password',
+            passwordPlaceholder: 'Enter password...',
+            creator: 'Creator',
+            members: 'Members',
+            created: 'Created',
+            playGame: 'Play Game',
+            leaveRoom: 'Leave Room',
+            deleteRoom: 'Delete Room',
+            noRooms: 'No rooms found. Create or join a room to get started!'
+        },
         game: {
             title: 'Question Game',
             subtitle: 'Answer questions one by one',
@@ -86,7 +112,19 @@ const messages = {
             progress: 'Question {current} of {total}',
             finish: 'Finish',
             tryAgain: 'Try Again',
-            failedToLoad: 'Failed to load questions'
+            failedToLoad: 'Failed to load questions',
+            selectMode: 'Select Game Mode',
+            selectModeDesc: 'Choose how you want to play the game',
+            playAll: 'Play All Questions',
+            availableRooms: 'Available Rooms',
+            noAvailableRooms: 'No rooms available. Create a room first!',
+            playingInRoom: 'Playing in Room',
+            playingAllQuestions: 'Playing All Questions',
+            exitRoom: 'Exit Room',
+            backToMenu: 'Back to Menu',
+            startGame: 'Start Game',
+            joinRoom: 'Join Room',
+            createRoom: 'Create Room'
         },
         about: {
             title: 'About Quiz App',
@@ -132,6 +170,13 @@ const messages = {
             install: 'Install',
             later: 'Later'
         },
+        common: {
+            loading: 'Loading...',
+            cancel: 'Cancel',
+            save: 'Save',
+            delete: 'Delete',
+            edit: 'Edit'
+        },
         messages: {
             success: 'Success!',
             error: 'Error!',
@@ -150,6 +195,7 @@ const messages = {
         nav: {
             dashboard: 'Панель',
             questions: 'Питання',
+            rooms: 'Кімнати',
             game: 'Гра',
             about: 'Про додаток',
             logout: 'Вийти',
@@ -183,7 +229,10 @@ const messages = {
             questionsCreated: 'Створено питань',
             saving: 'Збереження...',
             save: 'Зберегти',
-            cancel: 'Скасувати'
+            cancel: 'Скасувати',
+            userStats: 'Статистика користувачів',
+            noStats: 'Статистика недоступна',
+            totalQuestions: 'Всього питань'
         },
         questions: {
             title: 'Створити питання',
@@ -214,6 +263,30 @@ const messages = {
             inGame: 'Виключити з гри',
             notInGame: 'Включити в гру'
         },
+        rooms: {
+            title: 'Ігрові кімнати',
+            subtitle: 'Створюйте або приєднуйтесь до кімнат для гри з конкретними групами',
+            createRoom: 'Створити кімнату',
+            joinRoom: "Приєднатися до кімнати",
+            myRooms: 'Мої кімнати',
+            roomName: 'Назва кімнати',
+            roomNamePlaceholder: 'Введіть назву кімнати...',
+            roomPassword: 'Пароль кімнати',
+            roomPasswordPlaceholder: 'Введіть пароль (мін. 3 символи)...',
+            roomNumber: 'Номер кімнати',
+            roomNumberPlaceholder: '123',
+            password: 'Пароль',
+            passwordPlaceholder: 'Введіть пароль...',
+            creator: 'Створювач',
+            members: 'Учасники',
+            created: 'Створено',
+            playGame: 'Грати',
+            leaveRoom: 'Покинути кімнату',
+            deleteRoom: 'Видалити кімнату',
+            noRooms: 'Кімнат не знайдено. Створіть або приєднайтесь до кімнати, щоб розпочати!',
+            joinRoom: 'Приєднатися до кімнати',
+            createRoom: 'Створити кімнату'
+        },
         game: {
             title: 'Гра з питаннями',
             subtitle: 'Відповідайте на питання одне за одним',
@@ -231,7 +304,17 @@ const messages = {
             progress: 'Питання {current} з {total}',
             finish: 'Завершити',
             tryAgain: 'Спробувати знову',
-            failedToLoad: 'Не вдалося завантажити питання'
+            failedToLoad: 'Не вдалося завантажити питання',
+            selectMode: 'Оберіть режим гри',
+            selectModeDesc: 'Виберіть, як ви хочете грати',
+            playAll: 'Грати всі питання',
+            availableRooms: 'Доступні кімнати',
+            noAvailableRooms: 'Немає доступних кімнат. Спочатку створіть кімнату!',
+            playingInRoom: 'Гра в кімнаті',
+            playingAllQuestions: 'Гра з усіма питаннями',
+            exitRoom: 'Вийти з кімнати',
+            backToMenu: 'Назад до меню',
+            startGame: 'Почати гру'
         },
         about: {
             title: 'Про Quiz App',
@@ -276,6 +359,13 @@ const messages = {
             subtitle: 'Додайте на головний екран для кращого досвіду',
             install: 'Встановити',
             later: 'Пізніше'
+        },
+        common: {
+            loading: 'Завантаження...',
+            cancel: 'Скасувати',
+            save: 'Зберегти',
+            delete: 'Видалити',
+            edit: 'Редагувати'
         },
         messages: {
             success: 'Успіх!',

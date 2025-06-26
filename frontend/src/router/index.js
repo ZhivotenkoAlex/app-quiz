@@ -3,6 +3,7 @@ import { auth } from '../services/auth'
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Questions from '../views/Questions.vue'
+import Rooms from '../views/Rooms.vue'
 import Game from '../views/Game.vue'
 import About from '../views/About.vue'
 
@@ -30,10 +31,16 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/rooms',
+        name: 'Rooms',
+        component: Rooms,
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/game',
         name: 'Game',
         component: Game,
-        meta: { requiresAuth: true, requiresAdmin: true }
+        meta: { requiresAuth: true }
     },
     {
         path: '/about',

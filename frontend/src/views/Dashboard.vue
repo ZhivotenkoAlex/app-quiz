@@ -56,20 +56,47 @@
             >
               {{ $t("dashboard.editProfile") }}
             </button>
-            <button
-              @click="testTokenRefresh"
-              class="btn btn-primary btn-small"
-              style="margin-top: 1rem; margin-left: 0.5rem"
+          </div>
+        </div>
+
+        <!-- User Statistics (Admin Only) -->
+        <div v-if="user?.isAdmin" class="card user-stats-card">
+          <h3>{{ $t("dashboard.userStats") }}</h3>
+          <div v-if="loadingStats" class="loading-stats">
+            <div class="loading"></div>
+            <p>{{ $t("common.loading") }}...</p>
+          </div>
+          <div v-else-if="userStats.length === 0" class="no-stats">
+            {{ $t("dashboard.noStats") }}
+          </div>
+          <div v-else class="stats-list">
+            <div
+              v-for="stat in userStats"
+              :key="stat.creator_name"
+              class="user-stat-item"
             >
-              🔄 Test Token Refresh
-            </button>
-            <button
-              @click="testAuthCall"
-              class="btn btn-secondary btn-small"
-              style="margin-top: 1rem; margin-left: 0.5rem"
-            >
-              🔐 Test Auth Call
-            </button>
+              <div class="stat-header">
+                <h4>{{ stat.creator_name }}</h4>
+                <span class="total-count"
+                  >{{ $t("dashboard.totalQuestions") }}:
+                  {{ stat.total_questions }}</span
+                >
+              </div>
+              <div class="addressee-breakdown">
+                <div
+                  v-for="addressee in stat.by_addressee"
+                  :key="addressee.addressee_name"
+                  class="addressee-item"
+                >
+                  <span class="addressee-name">{{
+                    addressee.addressee_name
+                  }}</span>
+                  <span class="question-count">{{
+                    addressee.question_count
+                  }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,6 +131,8 @@ export default {
     const favoriteColor = ref("")
     const savedData = ref(null)
     const questionCount = ref(0)
+    const userStats = ref([])
+    const loadingStats = ref(false)
 
     const showMessage = (text, type = "alert-success") => {
       message.value = text
@@ -176,6 +205,25 @@ export default {
       }
     }
 
+    const loadUserStats = async () => {
+      if (!user.value?.isAdmin) return
+
+      loadingStats.value = true
+      try {
+        const response = await api.get("/admin/user-stats")
+        userStats.value = response.data.stats
+      } catch (error) {
+        console.error("Failed to load user stats:", error)
+        showMessage(
+          "Failed to load user statistics: " +
+            (error.response?.data?.error || error.message),
+          "alert-error"
+        )
+      } finally {
+        loadingStats.value = false
+      }
+    }
+
     const formatDate = (dateString) => {
       if (!dateString) return "N/A"
       return new Date(dateString).toLocaleDateString("en-US", {
@@ -226,50 +274,10 @@ export default {
       }
     }
 
-    const testTokenRefresh = async () => {
-      try {
-        // console.log("🧪 Testing token refresh...")
-        // console.log("Current token:", auth.token.value?.substring(0, 20) + "...")
-
-        // Manually call the refresh endpoint
-        const result = await auth.refreshTokens()
-
-        // if (result.success) {
-        // showMessage("✅ Token refreshed successfully!")
-        // console.log("New token:", auth.token.value?.substring(0, 20) + "...")
-        // } else {
-        //   showMessage("❌ Token refresh failed: " + result.error, "alert-error")
-        // }
-      } catch (error) {
-        console.error("Token refresh test error:", error)
-        showMessage(
-          "❌ Token refresh test failed: " + error.message,
-          "alert-error"
-        )
-      }
-    }
-
-    const testAuthCall = async () => {
-      try {
-        // console.log("🔐 Testing authenticated API call...")
-        const response = await api.get("/test-auth")
-        showMessage(
-          "✅ Authenticated call successful! User: " + response.data.user
-        )
-        // console.log("Auth test response:", response.data)
-      } catch (error) {
-        console.error("Auth test error:", error)
-        showMessage(
-          "❌ Auth test failed: " +
-            (error.response?.data?.error || error.message),
-          "alert-error"
-        )
-      }
-    }
-
     onMounted(() => {
       loadUserData()
       loadQuestionCount()
+      loadUserStats()
     })
 
     return {
@@ -285,15 +293,16 @@ export default {
       favoriteColor,
       savedData,
       questionCount,
+      userStats,
+      loadingStats,
       saveData,
       loadUserData,
       clearData,
       loadQuestionCount,
+      loadUserStats,
       startProfileEdit,
       cancelProfileEdit,
       saveProfile,
-      testTokenRefresh,
-      testAuthCall,
       formatDate,
     }
   },
@@ -385,6 +394,91 @@ export default {
 textarea.form-input {
   resize: vertical;
   min-height: 100px;
+}
+
+.user-stats-card {
+  grid-column: 1 / -1;
+}
+
+.loading-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.no-stats {
+  text-align: center;
+  color: var(--text-light);
+  font-style: italic;
+  padding: 2rem;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.user-stat-item {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f8f9fa;
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.stat-header h4 {
+  margin: 0;
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+.total-count {
+  font-weight: 600;
+  color: var(--secondary-color);
+  font-size: 0.9rem;
+}
+
+.addressee-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.addressee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.addressee-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.question-count {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
