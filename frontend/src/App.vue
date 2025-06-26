@@ -76,6 +76,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .nav-brand {
