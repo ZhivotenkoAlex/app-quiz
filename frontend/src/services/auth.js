@@ -13,11 +13,10 @@ export const auth = {
     async login(email, password) {
         try {
             const response = await api.post('/login', { email, password })
-            const { token: newToken, user: userData, isAdmin: isAdminData } = response.data
+            const { token: newToken, user: userData } = response.data
 
             token.value = newToken
             user.value = userData
-            isAdmin.value = isAdminData
             localStorage.setItem('token', newToken)
 
             return { success: true }
