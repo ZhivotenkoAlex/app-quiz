@@ -101,7 +101,7 @@ export default {
 
 .nav-menu {
   display: flex;
-  gap: 2rem;
+  /* gap: 2rem; */
   flex: 1;
   justify-content: center;
 }

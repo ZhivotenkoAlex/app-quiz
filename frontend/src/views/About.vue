@@ -377,6 +377,7 @@ export default {
   display: flex;
   gap: 1rem;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
 }
 
@@ -384,6 +385,10 @@ export default {
   padding: 1rem 2rem;
   font-size: 1.1rem;
   font-weight: 600;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {
@@ -408,6 +413,13 @@ export default {
   .cta-actions {
     flex-direction: column;
     align-items: center;
+    gap: 1rem;
+  }
+
+  .cta-actions .btn {
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
   }
 }
 </style>
