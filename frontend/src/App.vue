@@ -104,9 +104,17 @@ export default {
 
 .nav-menu {
   display: flex;
-  /* gap: 2rem; */
+  gap: 0.5rem;
   flex: 1;
   justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding: 0.25rem 0;
+}
+
+.nav-menu::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .nav-link {
@@ -116,6 +124,8 @@ export default {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   transition: all 0.3s ease;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-shrink: 0; /* Prevent links from shrinking */
 }
 
 .nav-link:hover {
@@ -132,7 +142,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 0 auto;
 }
 
 .user-greeting {
