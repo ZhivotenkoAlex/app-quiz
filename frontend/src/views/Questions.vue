@@ -91,24 +91,25 @@
         </div>
 
         <!-- Question Statistics -->
-        <div class="card" v-if="questionStats.length > 0">
-          <h3>Questions by Addressee</h3>
-          <div class="stats-grid">
-            <div
-              v-for="stat in questionStats"
-              :key="stat.id"
-              class="stat-card"
-              :class="{ 'current-user': stat.id === currentUserId }"
-            >
+        <div class="card">
+          <h3>Questions You Created by Addressee</h3>
+          <div
+            v-if="questionStats && questionStats.length > 0"
+            class="stats-grid"
+          >
+            <div v-for="stat in questionStats" :key="stat.id" class="stat-card">
               <div class="stat-info">
                 <h4>{{ stat.name }}</h4>
                 <p class="stat-email">{{ stat.email }}</p>
               </div>
               <div class="stat-count">
                 <span class="count-number">{{ stat.question_count }}</span>
-                <span class="count-label">addressed</span>
+                <span class="count-label">questions</span>
               </div>
             </div>
+          </div>
+          <div v-else class="no-stats">
+            <p>No questions created yet</p>
           </div>
         </div>
 
@@ -222,7 +223,7 @@ export default {
     const users = ref([])
     const questions = ref([{ text: "", addresseeId: "" }])
     const existingQuestions = ref([])
-    const questionStats = ref([])
+    const questionStats = ref(null)
     const loading = ref(false)
     const saving = ref(false)
     const updating = ref(false)
@@ -233,6 +234,7 @@ export default {
     const editForm = ref({ text: "", addresseeId: "" })
 
     const currentUserId = computed(() => auth.user.value?.id)
+    const user = computed(() => auth.user.value)
 
     const canSave = computed(() => {
       return questions.value.some((q) => q.text.trim() && q.addresseeId)
@@ -280,6 +282,7 @@ export default {
         questionStats.value = response.data.stats
       } catch (err) {
         console.error("Failed to load question stats:", err)
+        questionStats.value = []
       }
     }
 
@@ -421,6 +424,7 @@ export default {
       existingQuestions,
       questionStats,
       currentUserId,
+      user,
       loading,
       saving,
       updating,
@@ -662,6 +666,12 @@ export default {
   color: var(--text-light);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.no-stats {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
 }
 
 @media (max-width: 768px) {

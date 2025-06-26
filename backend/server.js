@@ -259,9 +259,11 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     }
 });
 
-// Get question counts by addressee (who questions are addressed to)
+// Get question counts by addressee for current user's created questions
 app.get('/api/questions/stats', authenticateToken, async (req, res) => {
     try {
+        const userId = req.user.userId;
+
         const result = await pool.query(`
             SELECT 
                 u.id,
@@ -269,10 +271,11 @@ app.get('/api/questions/stats', authenticateToken, async (req, res) => {
                 u.email,
                 COUNT(q.id) as question_count
             FROM users u
-            LEFT JOIN questions q ON u.id = q.addressee_id
+            LEFT JOIN questions q ON (u.id = q.addressee_id AND q.created_by = $1)
             GROUP BY u.id, u.name, u.email
+            HAVING COUNT(q.id) > 0
             ORDER BY question_count DESC, u.name ASC
-        `);
+        `, [userId]);
 
         res.json({ stats: result.rows });
     } catch (error) {
