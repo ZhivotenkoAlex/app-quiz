@@ -150,7 +150,7 @@ export default {
 .login-card {
   width: 100%;
   max-width: 400px;
-  margin: 2rem;
+  margin: 0 auto;
 }
 
 .login-title {

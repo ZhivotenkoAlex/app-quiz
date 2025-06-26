@@ -114,6 +114,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin: 0 auto;
 }
 
 .user-greeting {
