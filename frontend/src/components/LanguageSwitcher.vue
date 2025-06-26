@@ -42,6 +42,7 @@ export default {
 .language-switcher {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .language-select {
