@@ -4,6 +4,7 @@ import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Questions from '../views/Questions.vue'
 import Game from '../views/Game.vue'
+import About from '../views/About.vue'
 
 const routes = [
     {
@@ -33,6 +34,12 @@ const routes = [
         name: 'Game',
         component: Game,
         meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/about',
+        name: 'About',
+        component: About,
+        meta: { requiresAuth: true }
     }
 ]
 

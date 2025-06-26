@@ -14,6 +14,9 @@
             <router-link v-if="isAdmin" to="/game" class="nav-link">
               {{ $t("nav.game") }}
             </router-link>
+            <router-link to="/about" class="nav-link">
+              {{ $t("nav.about") }}
+            </router-link>
           </div>
           <div class="nav-actions">
             <LanguageSwitcher />
