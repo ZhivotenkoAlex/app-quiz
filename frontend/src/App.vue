@@ -4,24 +4,56 @@
       <div class="container">
         <div class="nav-content">
           <h1 class="nav-brand">App Quiz</h1>
-          <div class="nav-menu">
-            <router-link to="/dashboard" class="nav-link">
+
+          <!-- Hamburger button (visible on mobile) -->
+          <button
+            class="hamburger-btn"
+            @click="toggleMobileMenu"
+            :class="{ active: mobileMenuOpen }"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div class="nav-menu" :class="{ 'mobile-open': mobileMenuOpen }">
+            <router-link
+              to="/dashboard"
+              class="nav-link"
+              @click="closeMobileMenu"
+            >
               {{ $t("nav.dashboard") }}
             </router-link>
-            <router-link to="/questions" class="nav-link">
+            <router-link
+              to="/questions"
+              class="nav-link"
+              @click="closeMobileMenu"
+            >
               {{ $t("nav.questions") }}
             </router-link>
-            <router-link to="/rooms" class="nav-link">
+            <router-link to="/rooms" class="nav-link" @click="closeMobileMenu">
               {{ $t("nav.rooms") }}
             </router-link>
-            <router-link to="/game" class="nav-link">
+            <router-link to="/game" class="nav-link" @click="closeMobileMenu">
               {{ $t("nav.game") }}
             </router-link>
-            <router-link to="/about" class="nav-link">
+            <router-link to="/about" class="nav-link" @click="closeMobileMenu">
               {{ $t("nav.about") }}
             </router-link>
+
+            <!-- Mobile nav actions (inside hamburger menu) -->
+            <div class="mobile-nav-actions">
+              <LanguageSwitcher />
+              <span class="user-greeting">{{
+                $t("nav.hello", { name: user?.name })
+              }}</span>
+              <button @click="logout" class="btn btn-secondary">
+                {{ $t("nav.logout") }}
+              </button>
+            </div>
           </div>
-          <div class="nav-actions">
+
+          <div class="nav-actions desktop-actions">
             <LanguageSwitcher />
             <span class="user-greeting">{{
               $t("nav.hello", { name: user?.name })
@@ -43,7 +75,7 @@
 </template>
 
 <script>
-import { computed, onMounted } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "./services/auth"
 import InstallPrompt from "./components/InstallPrompt.vue"
@@ -57,6 +89,7 @@ export default {
   },
   setup() {
     const router = useRouter()
+    const mobileMenuOpen = ref(false)
 
     const isAuthenticated = computed(() => auth.isAuthenticated.value)
     const user = computed(() => auth.user.value)
@@ -67,6 +100,14 @@ export default {
       router.push("/login")
     }
 
+    const toggleMobileMenu = () => {
+      mobileMenuOpen.value = !mobileMenuOpen.value
+    }
+
+    const closeMobileMenu = () => {
+      mobileMenuOpen.value = false
+    }
+
     onMounted(() => {
       auth.checkAuth()
     })
@@ -75,7 +116,10 @@ export default {
       isAuthenticated,
       user,
       isAdmin,
+      mobileMenuOpen,
       logout,
+      toggleMobileMenu,
+      closeMobileMenu,
     }
   },
 }
@@ -109,6 +153,41 @@ export default {
   font-weight: 600;
 }
 
+/* Hamburger button */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.hamburger-btn span {
+  width: 100%;
+  height: 3px;
+  background: var(--primary-color);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburger-btn.active span:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(8px, -8px);
+}
+
 .nav-menu {
   display: flex;
   gap: 0.5rem;
@@ -117,8 +196,69 @@ export default {
   padding: 0.25rem 0;
 }
 
-/* Enable scrolling for screens below 1200px (matching container max-width) */
-@media (max-width: 1200px) {
+.mobile-nav-actions {
+  display: none;
+}
+
+/* Mobile hamburger menu styles */
+@media (max-width: 1100px) {
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .nav-actions.desktop-actions {
+    display: none !important;
+  }
+
+  .nav-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 80px 2rem 2rem;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .nav-menu.mobile-open {
+    right: 0;
+  }
+
+  .nav-link {
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .nav-link:last-of-type {
+    border-bottom: none;
+  }
+
+  .mobile-nav-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .mobile-nav-actions .user-greeting {
+    text-align: center;
+    padding: 0.5rem;
+  }
+}
+
+/* Enable scrolling for screens between 1100px and 1200px */
+@media (min-width: 1100px) and (max-width: 1200px) {
   .nav-menu {
     overflow-x: auto;
     scrollbar-width: none; /* Firefox */
