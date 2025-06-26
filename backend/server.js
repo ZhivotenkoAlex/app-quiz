@@ -30,15 +30,15 @@ const initDB = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
-        is_admin BOOLEAN DEFAULT FALSE,
+        "isAdmin" BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-        // Add is_admin column if it doesn't exist (for existing databases)
+        // Add isAdmin column if it doesn't exist (for existing databases)
         await pool.query(`
       ALTER TABLE users 
-      ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
+      ADD COLUMN IF NOT EXISTS "isAdmin" BOOLEAN DEFAULT FALSE
     `);
 
         console.log('Database initialized');
@@ -67,6 +67,7 @@ const authenticateToken = (req, res, next) => {
 
 // Admin middleware
 const requireAdmin = (req, res, next) => {
+    console.log('Admin check - req.user:', req.user); // Debug log
     if (!req.user || !req.user.isAdmin) {
         return res.status(403).json({ error: 'Admin access required' });
     }
@@ -97,12 +98,12 @@ app.post('/api/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, is_admin',
+            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, "isAdmin"',
             [email, hashedPassword, name]
         );
 
         const token = jwt.sign(
-            { userId: result.rows[0].id, email: result.rows[0].email, isAdmin: result.rows[0].is_admin },
+            { userId: result.rows[0].id, email: result.rows[0].email, isAdmin: result.rows[0].isAdmin },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
@@ -113,7 +114,7 @@ app.post('/api/register', async (req, res) => {
                 id: result.rows[0].id,
                 email: result.rows[0].email,
                 name: result.rows[0].name,
-                isAdmin: result.rows[0].is_admin || false
+                isAdmin: result.rows[0].isAdmin || false
             },
             token
         });
@@ -150,10 +151,10 @@ app.post('/api/login', async (req, res) => {
         }
 
         console.log('User from DB:', user); // Debug log
-        console.log('is_admin value:', user.is_admin); // Debug log
+        console.log('isAdmin value:', user.isAdmin); // Debug log
 
         const token = jwt.sign(
-            { userId: user.id, email: user.email, isAdmin: user.is_admin },
+            { userId: user.id, email: user.email, isAdmin: user.isAdmin },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
@@ -162,7 +163,7 @@ app.post('/api/login', async (req, res) => {
             id: user.id,
             email: user.email,
             name: user.name,
-            isAdmin: user.is_admin || false
+            isAdmin: user.isAdmin || false
         };
 
         console.log('User response:', userResponse); // Debug log
@@ -427,7 +428,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
         }
 
         const result = await pool.query(
-            'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name, is_admin',
+            'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name, "isAdmin"',
             [name.trim(), userId]
         );
 
@@ -437,7 +438,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
                 id: result.rows[0].id,
                 email: result.rows[0].email,
                 name: result.rows[0].name,
-                isAdmin: result.rows[0].is_admin || false
+                isAdmin: result.rows[0].isAdmin || false
             }
         });
     } catch (error) {
