@@ -102,7 +102,12 @@ app.post('/api/register', async (req, res) => {
 
         res.status(201).json({
             message: 'User created successfully',
-            user: result.rows[0],
+            user: {
+                id: result.rows[0].id,
+                email: result.rows[0].email,
+                name: result.rows[0].name,
+                isAdmin: result.rows[0].is_admin || false
+            },
             token
         });
     } catch (error) {
@@ -145,7 +150,12 @@ app.post('/api/login', async (req, res) => {
 
         res.json({
             message: 'Login successful',
-            user: { id: user.id, email: user.email, name: user.name, isAdmin: user.is_admin },
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                isAdmin: user.is_admin || false
+            },
             token
         });
     } catch (error) {
@@ -403,13 +413,18 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
         }
 
         const result = await pool.query(
-            'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name',
+            'UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name, is_admin',
             [name.trim(), userId]
         );
 
         res.json({
             message: 'Profile updated successfully',
-            user: result.rows[0]
+            user: {
+                id: result.rows[0].id,
+                email: result.rows[0].email,
+                name: result.rows[0].name,
+                isAdmin: result.rows[0].is_admin || false
+            }
         });
     } catch (error) {
         console.error('Update profile error:', error);
