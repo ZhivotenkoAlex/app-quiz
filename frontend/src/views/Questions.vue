@@ -92,7 +92,7 @@
 
         <!-- Question Statistics -->
         <div class="card" v-if="questionStats.length > 0">
-          <h3>Question Statistics</h3>
+          <h3>Questions by Addressee</h3>
           <div class="stats-grid">
             <div
               v-for="stat in questionStats"
@@ -106,7 +106,7 @@
               </div>
               <div class="stat-count">
                 <span class="count-number">{{ stat.question_count }}</span>
-                <span class="count-label">questions</span>
+                <span class="count-label">addressed</span>
               </div>
             </div>
           </div>
