@@ -434,6 +434,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
         q.id,
         q.question_text,
         q.created_at,
+        q.addressee_id,
         u_addressee.name as addressee_name,
         u_addressee.email as addressee_email,
         u_creator.name as creator_name

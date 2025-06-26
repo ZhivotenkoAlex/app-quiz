@@ -61,7 +61,11 @@ const messages = {
             deleting: 'Deleting...',
             to: 'To',
             createdBy: 'Questions You Created by Addressee',
-            noQuestions: 'No questions created yet'
+            noQuestions: 'No questions created yet',
+            filterByUser: 'Filter by User',
+            allUsers: 'All Users',
+            questionsShown: 'questions shown',
+            clearFilter: 'Clear'
         },
         game: {
             title: 'Question Game',
@@ -200,7 +204,11 @@ const messages = {
             deleting: 'Видалення...',
             to: 'Для',
             createdBy: 'Питання, які ви створили за адресатом',
-            noQuestions: 'Питань ще не створено'
+            noQuestions: 'Питань ще не створено',
+            filterByUser: 'Фільтр за користувачем',
+            allUsers: 'Всі користувачі',
+            questionsShown: 'питань показано',
+            clearFilter: 'Очистити'
         },
         game: {
             title: 'Гра з питаннями',

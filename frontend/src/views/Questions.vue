@@ -127,10 +127,46 @@
 
         <!-- Display existing questions -->
         <div class="card" v-if="existingQuestions.length > 0">
-          <h3>{{ $t("questions.myQuestions") }}</h3>
+          <div class="questions-list-header">
+            <div class="questions-title-section">
+              <h3>{{ $t("questions.myQuestions") }}</h3>
+              <span class="questions-count">
+                {{ filteredQuestions.length }}
+                {{ $t("questions.questionsShown") }}
+              </span>
+            </div>
+            <div class="filter-section">
+              <label class="form-label">{{
+                $t("questions.filterByUser")
+              }}</label>
+              <div class="filter-controls">
+                <select
+                  v-model="selectedUserFilter"
+                  class="form-input filter-select"
+                >
+                  <option value="">{{ $t("questions.allUsers") }}</option>
+                  <option
+                    v-for="user in availableUsers"
+                    :key="user.id"
+                    :value="user.id"
+                  >
+                    {{ user.name }}
+                  </option>
+                </select>
+                <button
+                  v-if="selectedUserFilter"
+                  @click="selectedUserFilter = ''"
+                  class="btn btn-secondary btn-small clear-filter-btn"
+                  type="button"
+                >
+                  {{ $t("questions.clearFilter") }}
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="questions-list">
             <div
-              v-for="question in existingQuestions"
+              v-for="question in filteredQuestions"
               :key="question.id"
               class="question-card"
             >
@@ -254,12 +290,38 @@ export default {
     const success = ref("")
     const editingQuestion = ref(null)
     const editForm = ref({ text: "", addresseeId: "" })
+    const selectedUserFilter = ref("")
 
     const currentUserId = computed(() => auth.user.value?.id)
     const user = computed(() => auth.user.value)
 
     const canSave = computed(() => {
       return questions.value.some((q) => q.text.trim() && q.addresseeId)
+    })
+
+    const availableUsers = computed(() => {
+      // Get unique users from existing questions
+      const userMap = new Map()
+      existingQuestions.value.forEach((question) => {
+        if (question.addressee_name && question.addressee_email) {
+          userMap.set(question.addressee_email, {
+            id: question.addressee_email, // Use email as unique identifier
+            name: question.addressee_name,
+          })
+        }
+      })
+      return Array.from(userMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+    })
+
+    const filteredQuestions = computed(() => {
+      if (!selectedUserFilter.value) {
+        return existingQuestions.value
+      }
+      return existingQuestions.value.filter(
+        (question) => question.addressee_email === selectedUserFilter.value
+      )
     })
 
     const showMessage = (message, type = "success") => {
@@ -455,6 +517,9 @@ export default {
       canSave,
       editingQuestion,
       editForm,
+      selectedUserFilter,
+      availableUsers,
+      filteredQuestions,
       addQuestion,
       removeQuestion,
       saveQuestions,
@@ -571,6 +636,48 @@ export default {
 .save-section {
   display: flex;
   gap: 1rem;
+}
+
+.questions-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  gap: 2rem;
+}
+
+.questions-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.questions-count {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.filter-select {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.clear-filter-btn {
+  white-space: nowrap;
 }
 
 .questions-list {
@@ -718,6 +825,25 @@ export default {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .questions-list-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-section {
+    min-width: auto;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .clear-filter-btn {
+    align-self: flex-start;
   }
 }
 </style>
